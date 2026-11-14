@@ -1,0 +1,24 @@
+{
+    "name": "Unbounded.Tests.PlayMode",
+    "rootNamespace": "Unbounded.Tests.PlayMode",
+    "references": [
+        "Unbounded.Core",
+        "Unbounded.Vehicle",
+        "Unbounded.App",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

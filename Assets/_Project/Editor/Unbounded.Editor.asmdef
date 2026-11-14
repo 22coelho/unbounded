@@ -1,0 +1,26 @@
+{
+    "name": "Unbounded.Editor",
+    "rootNamespace": "Unbounded.Editor",
+    "references": [
+        "Unbounded.Core",
+        "Unbounded.Vehicle",
+        "Unbounded.Track",
+        "Unbounded.AI",
+        "Unbounded.Race",
+        "Unbounded.UI",
+        "Unbounded.App",
+        "Unity.Cinemachine",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

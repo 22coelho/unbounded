@@ -1,0 +1,22 @@
+{
+    "name": "Unbounded.App",
+    "rootNamespace": "Unbounded.App",
+    "references": [
+        "Unbounded.Core",
+        "Unbounded.Vehicle",
+        "Unbounded.Track",
+        "Unbounded.AI",
+        "Unbounded.Race",
+        "Unbounded.UI",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

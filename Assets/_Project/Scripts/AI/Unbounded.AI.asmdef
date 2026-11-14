@@ -1,0 +1,16 @@
+{
+    "name": "Unbounded.AI",
+    "rootNamespace": "Unbounded.AI",
+    "references": [
+        "Unbounded.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
