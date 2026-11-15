@@ -29,6 +29,9 @@ namespace Unbounded.Vehicle
             }
         }
 
+        /// <summary>Set by a track-aware adapter; defaults to asphalt.</summary>
+        public HandlingSurface Surface { get; set; } = HandlingSurface.Road;
+
         public HandlingInput CurrentInput => _input;
 
         public HandlingForces LastForces { get; private set; }
@@ -59,7 +62,7 @@ namespace Unbounded.Vehicle
                 YawRate = _body.angularVelocity.y
             };
 
-            HandlingForces forces = _model.Step(motion, _input, Time.fixedDeltaTime);
+            HandlingForces forces = _model.Step(motion, _input, Surface, Time.fixedDeltaTime);
             LastForces = forces;
 
             _body.AddForce(transform.forward * forces.DriveForce, ForceMode.Force);

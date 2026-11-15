@@ -7,8 +7,8 @@ one track, one car, and five AI opponents over three laps.
 ## Status
 
 Milestone 1 in progress. The handling model, its Rigidbody adapter, gamepad and
-keyboard input, a test plane, and a chase camera are in place. The generated
-circuit is next.
+keyboard input, a generated closed circuit with Kerbs and Barriers, and a chase
+camera are in place.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ Assets/_Project/
 │   ├── Race/     countdown, laps, standings, restart
 │   ├── UI/       HUD and finish screen
 │   └── App/      composition root
-└── Tests/        EditMode (handling model) and PlayMode (scene smoke test)
+└── Tests/        EditMode (handling, track path) and PlayMode (drives the circuit)
 ```
 
 Assembly references point inward: `UI` and `App` may reference any runtime

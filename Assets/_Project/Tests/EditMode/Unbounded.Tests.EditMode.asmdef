@@ -4,6 +4,7 @@
     "references": [
         "Unbounded.Core",
         "Unbounded.Vehicle",
+        "Unbounded.Track",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

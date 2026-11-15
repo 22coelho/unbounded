@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Passed" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.2153999">
+  <test-suite type="TestSuite" id="1016" name="Unbounded" fullname="Unbounded" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.215400" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1025" name="Unbounded.Tests.PlayMode.dll" fullname="/Users/tiagocoelho/Documents/Projects/Unbounded/Library/ScriptAssemblies/Unbounded.Tests.PlayMode.dll" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.211584" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="49046" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1026" name="Unbounded" fullname="Unbounded" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.211307" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1027" name="Tests" fullname="Unbounded.Tests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.211231" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1028" name="PlayMode" fullname="Unbounded.Tests.PlayMode" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.211138" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1017" name="MainSceneSmokeTests" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:54:28Z" duration="65.210592" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1021" name="BarrierStopsTheCarWithoutSwallowingOrTrappingIt" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.BarrierStopsTheCarWithoutSwallowingOrTrappingIt" methodname="BarrierStopsTheCarWithoutSwallowingOrTrappingIt" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="943614211" result="Passed" start-time="2026-11-15 19:53:23Z" end-time="2026-11-15 19:53:32Z" duration="8.455090" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1024" name="CarCanDriveAFullLapWithoutLeavingTheTrack" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.CarCanDriveAFullLapWithoutLeavingTheTrack" methodname="CarCanDriveAFullLapWithoutLeavingTheTrack" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="412130317" result="Passed" start-time="2026-11-15 19:53:32Z" end-time="2026-11-15 19:54:18Z" duration="46.363576" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="CarDrivesAndSteersWithTheChaseCameraBehind" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.CarDrivesAndSteersWithTheChaseCameraBehind" methodname="CarDrivesAndSteersWithTheChaseCameraBehind" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="1296179399" result="Passed" start-time="2026-11-15 19:54:18Z" end-time="2026-11-15 19:54:21Z" duration="3.222796" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1019" name="CarSpawnsOnTheStartLineFacingAlongTheTrack" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.CarSpawnsOnTheStartLineFacingAlongTheTrack" methodname="CarSpawnsOnTheStartLineFacingAlongTheTrack" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="2031809692" result="Passed" start-time="2026-11-15 19:54:21Z" end-time="2026-11-15 19:54:21Z" duration="0.025366" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1022" name="ChaseCameraDoesNotPassThroughBarriers" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.ChaseCameraDoesNotPassThroughBarriers" methodname="ChaseCameraDoesNotPassThroughBarriers" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="1288222277" result="Passed" start-time="2026-11-15 19:54:21Z" end-time="2026-11-15 19:54:24Z" duration="3.020912" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1023" name="GrassSlowsTheCarInTheBuiltScene" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.GrassSlowsTheCarInTheBuiltScene" methodname="GrassSlowsTheCarInTheBuiltScene" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="1139959341" result="Passed" start-time="2026-11-15 19:54:24Z" end-time="2026-11-15 19:54:28Z" duration="4.039698" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1018" name="RoadKerbAndBarrierRunUnbrokenAroundTheWholeCircuit" fullname="Unbounded.Tests.PlayMode.MainSceneSmokeTests.RoadKerbAndBarrierRunUnbrokenAroundTheWholeCircuit" methodname="RoadKerbAndBarrierRunUnbrokenAroundTheWholeCircuit" classname="Unbounded.Tests.PlayMode.MainSceneSmokeTests" runstate="Runnable" seed="204289333" result="Passed" start-time="2026-11-15 19:54:28Z" end-time="2026-11-15 19:54:28Z" duration="0.075908" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: /Users/tiagocoelho/Library/Application Support/Unity Technologies/Unbounded/TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

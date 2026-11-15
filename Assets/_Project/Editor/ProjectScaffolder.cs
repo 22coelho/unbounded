@@ -12,7 +12,7 @@ namespace Unbounded.Editor
         public static void Run()
         {
             PlayerSettings.productName = "Unbounded";
-            TestPlaneSceneBuilder.Build();
+            MainSceneBuilder.Build();
             AssetDatabase.SaveAssets();
             Debug.Log("Scaffold complete.");
         }

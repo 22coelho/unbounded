@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="21" result="Passed" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.0366784">
+  <test-suite type="TestSuite" id="1000" name="Unbounded" fullname="Unbounded" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.036678" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1026" name="Unbounded.Tests.EditMode.dll" fullname="/Users/tiagocoelho/Documents/Projects/Unbounded/Library/ScriptAssemblies/Unbounded.Tests.EditMode.dll" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.032947" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="49117" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1027" name="Unbounded" fullname="Unbounded" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.032771" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1028" name="Tests" fullname="Unbounded.Tests" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.032721" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1029" name="EditMode" fullname="Unbounded.Tests.EditMode" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.032627" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1001" name="ArcadeHandlingModelTests" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.017102" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1003" name="BrakeSlowsForwardMotion" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.BrakeSlowsForwardMotion" methodname="BrakeSlowsForwardMotion" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="877139271" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.006744" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1008" name="FullSteerAtSpeedStaysBoundedInsteadOfSpinning" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.FullSteerAtSpeedStaysBoundedInsteadOfSpinning" methodname="FullSteerAtSpeedStaysBoundedInsteadOfSpinning" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="1698459028" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000501" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1007" name="GripIsStrongerAtLowSpeedThanHighSpeed" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.GripIsStrongerAtLowSpeedThanHighSpeed" methodname="GripIsStrongerAtLowSpeedThanHighSpeed" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="572186071" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000129" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1004" name="HoldingBrakeAtStandstillReverses" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.HoldingBrakeAtStandstillReverses" methodname="HoldingBrakeAtStandstillReverses" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="508007824" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000077" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1005" name="SteeringAtStandstillProducesNoMotion" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.SteeringAtStandstillProducesNoMotion" methodname="SteeringAtStandstillProducesNoMotion" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="444381968" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.002206" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1006" name="SteeringWhileMovingYawsTheCar" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.SteeringWhileMovingYawsTheCar" methodname="SteeringWhileMovingYawsTheCar" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="152423541" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000187" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1002" name="ThrottleAcceleratesFromRest" fullname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests.ThrottleAcceleratesFromRest" methodname="ThrottleAcceleratesFromRest" classname="Unbounded.Tests.EditMode.ArcadeHandlingModelTests" runstate="Runnable" seed="1301289593" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000101" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1009" name="HandlingSurfaceTests" fullname="Unbounded.Tests.EditMode.HandlingSurfaceTests" classname="Unbounded.Tests.EditMode.HandlingSurfaceTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.001175" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1011" name="GrassAddsRollingResistanceWhenCoasting" fullname="Unbounded.Tests.EditMode.HandlingSurfaceTests.GrassAddsRollingResistanceWhenCoasting" methodname="GrassAddsRollingResistanceWhenCoasting" classname="Unbounded.Tests.EditMode.HandlingSurfaceTests" runstate="Runnable" seed="1140891656" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000259" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1012" name="GrassReducesLateralGrip" fullname="Unbounded.Tests.EditMode.HandlingSurfaceTests.GrassReducesLateralGrip" methodname="GrassReducesLateralGrip" classname="Unbounded.Tests.EditMode.HandlingSurfaceTests" runstate="Runnable" seed="284729025" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000099" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1010" name="GrassSlowsTheCarNoticeably" fullname="Unbounded.Tests.EditMode.HandlingSurfaceTests.GrassSlowsTheCarNoticeably" methodname="GrassSlowsTheCarNoticeably" classname="Unbounded.Tests.EditMode.HandlingSurfaceTests" runstate="Runnable" seed="259562888" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000172" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1013" name="TrackPathTests" fullname="Unbounded.Tests.EditMode.TrackPathTests" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.012479" total="10" passed="10" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1015" name="DirectionIsContinuousAcrossTheSeam" fullname="Unbounded.Tests.EditMode.TrackPathTests.DirectionIsContinuousAcrossTheSeam" methodname="DirectionIsContinuousAcrossTheSeam" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="223411097" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.001178" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1019" name="LateralOffsetIsSignedAndMatchesTheOffsetFromTheCentreline" fullname="Unbounded.Tests.EditMode.TrackPathTests.LateralOffsetIsSignedAndMatchesTheOffsetFromTheCentreline" methodname="LateralOffsetIsSignedAndMatchesTheOffsetFromTheCentreline" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="1078406160" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.001861" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1017" name="ProjectingCentrelineSamplesRecoversTheirDistance" fullname="Unbounded.Tests.EditMode.TrackPathTests.ProjectingCentrelineSamplesRecoversTheirDistance" methodname="ProjectingCentrelineSamplesRecoversTheirDistance" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="1180432985" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.002539" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1018" name="ProjectionIsMonotonicAlongTheCentreline" fullname="Unbounded.Tests.EditMode.TrackPathTests.ProjectionIsMonotonicAlongTheCentreline" methodname="ProjectionIsMonotonicAlongTheCentreline" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="2136091281" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.002514" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1021" name="ProjectionOfAForeignPointKeepsDistanceAndLateralConsistent" fullname="Unbounded.Tests.EditMode.TrackPathTests.ProjectionOfAForeignPointKeepsDistanceAndLateralConsistent" methodname="ProjectionOfAForeignPointKeepsDistanceAndLateralConsistent" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="1380130979" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000299" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="ProjectionOfAPointBehindTheStartFinishesTheLap" fullname="Unbounded.Tests.EditMode.TrackPathTests.ProjectionOfAPointBehindTheStartFinishesTheLap" methodname="ProjectionOfAPointBehindTheStartFinishesTheLap" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="827375579" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000189" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1022" name="ProjectionRebuildsTheClosestPointItReports" fullname="Unbounded.Tests.EditMode.TrackPathTests.ProjectionRebuildsTheClosestPointItReports" methodname="ProjectionRebuildsTheClosestPointItReports" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="717433703" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.001938" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1016" name="SamplingByDistanceMeasuresUniformArcLength" fullname="Unbounded.Tests.EditMode.TrackPathTests.SamplingByDistanceMeasuresUniformArcLength" methodname="SamplingByDistanceMeasuresUniformArcLength" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="381149472" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000364" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1014" name="SamplingWrapsAcrossTheStartFinishSeam" fullname="Unbounded.Tests.EditMode.TrackPathTests.SamplingWrapsAcrossTheStartFinishSeam" methodname="SamplingWrapsAcrossTheStartFinishSeam" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="516695819" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000268" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1023" name="TheAuthoredCircuitStartsOnANorthboundStraight" fullname="Unbounded.Tests.EditMode.TrackPathTests.TheAuthoredCircuitStartsOnANorthboundStraight" methodname="TheAuthoredCircuitStartsOnANorthboundStraight" classname="Unbounded.Tests.EditMode.TrackPathTests" runstate="Runnable" seed="977129751" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000307" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1024" name="TrackSurfaceClassifierTests" fullname="Unbounded.Tests.EditMode.TrackSurfaceClassifierTests" classname="Unbounded.Tests.EditMode.TrackSurfaceClassifierTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.001150" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1025" name="SurfacesClassifyRoadKerbsAndGrass" fullname="Unbounded.Tests.EditMode.TrackSurfaceClassifierTests.SurfacesClassifyRoadKerbsAndGrass" methodname="SurfacesClassifyRoadKerbsAndGrass" classname="Unbounded.Tests.EditMode.TrackSurfaceClassifierTests" runstate="Runnable" seed="1318154085" result="Passed" start-time="2026-11-15 19:54:39Z" end-time="2026-11-15 19:54:39Z" duration="0.000784" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: /Users/tiagocoelho/Library/Application Support/Unity Technologies/Unbounded/TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,5 +1,6 @@
 using System.IO;
 using Unbounded.App;
+using Unbounded.Track;
 using Unbounded.Vehicle;
 using Unity.Cinemachine;
 using UnityEditor;
@@ -10,11 +11,12 @@ using UnityEngine.InputSystem;
 namespace Unbounded.Editor
 {
     /// <summary>
-    /// Builds the milestone-1 test plane: a flat ground, one drivable car, and
-    /// a Cinemachine chase camera. Run from the menu or in batch mode:
-    /// Unity -batchmode -quit -projectPath . -executeMethod Unbounded.Editor.TestPlaneSceneBuilder.Build
+    /// Builds the main scene: the generated circuit, one drivable car on the
+    /// start line, and a chase camera that keeps the barriers out of the lens.
+    /// Run from the menu or in batch mode:
+    /// Unity -batchmode -quit -projectPath . -executeMethod Unbounded.Editor.MainSceneBuilder.Build
     /// </summary>
-    public static class TestPlaneSceneBuilder
+    public static class MainSceneBuilder
     {
         private const string MainScenePath = "Assets/_Project/Scenes/Main.unity";
         private const string DrivingActionsPath = "Assets/_Project/Input/Driving.inputactions";
@@ -22,7 +24,13 @@ namespace Unbounded.Editor
         private const string TexturesFolder = "Assets/_Project/Art/Textures";
         private const string PhysicsFolder = "Assets/_Project/Art/Physics";
 
-        [MenuItem("Unbounded/Build Test Plane Scene")]
+        private const float GroundSize = 600f;
+        private static readonly Vector3 GroundCentre = new Vector3(-125f, 0f, 25f);
+
+        /// <summary>How far past the start/finish seam the car begins.</summary>
+        private const float SpawnDistance = 1.5f;
+
+        [MenuItem("Unbounded/Build Main Scene")]
         public static void Build()
         {
             InputActionAsset actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(DrivingActionsPath);
@@ -35,36 +43,73 @@ namespace Unbounded.Editor
             EnsureFolder(TexturesFolder);
             EnsureFolder(PhysicsFolder);
 
-            Texture2D checker = CreateCheckerTexture(Path.Combine(TexturesFolder, "TestPlaneChecker.png"));
-            PhysicsMaterial frictionless = CreateFrictionlessMaterial(
-                Path.Combine(PhysicsFolder, "Frictionless.physicMaterial"));
-            Material groundMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "TestPlane.mat"),
-                new Color(0.32f, 0.34f, 0.37f),
-                0.05f,
-                checker);
+            Material grassMaterial = CreateMaterial(
+                Path.Combine(MaterialsFolder, "Grass.mat"),
+                new Color(0.24f, 0.36f, 0.18f),
+                0.02f,
+                CreateNoiseTexture(Path.Combine(TexturesFolder, "Grass.png"), new Color(0.16f, 0.27f, 0.12f),
+                    new Color(0.31f, 0.43f, 0.21f), 7f),
+                new Vector2(GroundSize * 0.1f, GroundSize * 0.1f));
+            Material asphaltMaterial = CreateMaterial(
+                Path.Combine(MaterialsFolder, "Asphalt.mat"),
+                new Color(0.21f, 0.21f, 0.22f),
+                0.12f,
+                CreateNoiseTexture(Path.Combine(TexturesFolder, "Asphalt.png"), new Color(0.14f, 0.14f, 0.15f),
+                    new Color(0.26f, 0.26f, 0.27f), 24f),
+                Vector2.one);
+            Material kerbMaterial = CreateMaterial(
+                Path.Combine(MaterialsFolder, "Kerb.mat"),
+                Color.white,
+                0.18f,
+                CreateStripeTexture(Path.Combine(TexturesFolder, "Kerb.png"),
+                    new Color(0.82f, 0.13f, 0.11f), new Color(0.92f, 0.92f, 0.89f), 8),
+                Vector2.one);
+            Material barrierMaterial = CreateMaterial(
+                Path.Combine(MaterialsFolder, "Barrier.mat"),
+                new Color(0.82f, 0.82f, 0.80f),
+                0.22f,
+                CreateStripeTexture(Path.Combine(TexturesFolder, "Barrier.png"),
+                    new Color(0.66f, 0.10f, 0.09f), new Color(0.86f, 0.86f, 0.83f), 4),
+                Vector2.one);
+            Material startLineMaterial = CreateMaterial(
+                Path.Combine(MaterialsFolder, "StartLine.mat"),
+                new Color(0.9f, 0.9f, 0.85f),
+                0.2f,
+                null,
+                Vector2.one);
             Material bodyMaterial = CreateMaterial(
                 Path.Combine(MaterialsFolder, "CarBody.mat"),
                 new Color(0.72f, 0.08f, 0.07f),
                 0.55f,
-                null);
+                null,
+                Vector2.one);
             Material wheelMaterial = CreateMaterial(
                 Path.Combine(MaterialsFolder, "CarWheel.mat"),
                 new Color(0.035f, 0.035f, 0.04f),
                 0.15f,
-                null);
-            Material lineMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "StartLine.mat"),
-                new Color(0.9f, 0.9f, 0.85f),
-                0.2f,
-                null);
+                null,
+                Vector2.one);
+
+            PhysicsMaterial frictionless = CreateFrictionlessMaterial(
+                Path.Combine(PhysicsFolder, "Frictionless.physicMaterial"));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            CreateLighting();
-            CreateGround(groundMaterial, frictionless);
-            CreateStartLine(lineMaterial);
-            GameObject car = CreateCar(bodyMaterial, wheelMaterial, lineMaterial, actions, frictionless);
+            CreateCameraAndLight();
+            CreateGround(grassMaterial, frictionless);
+            TrackRoot track = CreateTrack(
+                asphaltMaterial,
+                kerbMaterial,
+                barrierMaterial,
+                startLineMaterial,
+                frictionless);
+            GameObject car = CreateCar(
+                bodyMaterial,
+                wheelMaterial,
+                startLineMaterial,
+                actions,
+                frictionless,
+                track);
             CreateChaseCamera(car.transform);
 
             if (!EditorSceneManager.SaveScene(scene, MainScenePath))
@@ -74,10 +119,10 @@ namespace Unbounded.Editor
 
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScenePath, true) };
             AssetDatabase.SaveAssets();
-            Debug.Log("Built the test plane scene.");
+            Debug.Log("Built the main scene with a " + track.Path.Length.ToString("0") + " metre circuit.");
         }
 
-        private static void CreateLighting()
+        private static void CreateCameraAndLight()
         {
             var cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
@@ -85,7 +130,11 @@ namespace Unbounded.Editor
             cameraObject.transform.rotation = Quaternion.Euler(8f, 0f, 0f);
             cameraObject.AddComponent<Camera>();
             cameraObject.AddComponent<AudioListener>();
-            cameraObject.AddComponent<CinemachineBrain>();
+            CinemachineBrain brain = cameraObject.AddComponent<CinemachineBrain>();
+
+            // The car is a Rigidbody, so sample the camera on the physics clock:
+            // it keeps the rig glued to the car no matter the render rate.
+            brain.UpdateMethod = CinemachineBrain.UpdateMethods.FixedUpdate;
 
             var lightObject = new GameObject("Directional Light");
             lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
@@ -99,21 +148,39 @@ namespace Unbounded.Editor
         private static void CreateGround(Material material, PhysicsMaterial physicMaterial)
         {
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "Test Plane";
-            ground.transform.position = Vector3.zero;
-            ground.transform.localScale = new Vector3(20f, 1f, 20f);
+            ground.name = "Grass Field";
+            ground.transform.position = GroundCentre;
+            ground.transform.localScale = new Vector3(GroundSize * 0.1f, 1f, GroundSize * 0.1f);
             ground.GetComponent<MeshRenderer>().sharedMaterial = material;
             ground.GetComponent<Collider>().sharedMaterial = physicMaterial;
         }
 
-        private static void CreateStartLine(Material material)
+        private static TrackRoot CreateTrack(
+            Material roadMaterial,
+            Material kerbMaterial,
+            Material barrierMaterial,
+            Material startLineMaterial,
+            PhysicsMaterial physicMaterial)
         {
-            GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            line.name = "Start Line";
-            UnityEngine.Object.DestroyImmediate(line.GetComponent<Collider>());
-            line.transform.position = new Vector3(0f, 0.02f, 4f);
-            line.transform.localScale = new Vector3(12f, 0.02f, 0.4f);
-            line.GetComponent<MeshRenderer>().sharedMaterial = material;
+            var trackObject = new GameObject("Track");
+            trackObject.transform.position = Vector3.zero;
+
+            var track = trackObject.AddComponent<TrackRoot>();
+            track.Configure(
+                TrackLayout.Circuit(),
+                TrackShape.Default,
+                roadMaterial,
+                kerbMaterial,
+                barrierMaterial,
+                startLineMaterial,
+                physicMaterial);
+
+            if (track.Path == null)
+            {
+                throw new IOException("The circuit failed to build from its control points.");
+            }
+
+            return track;
         }
 
         private static GameObject CreateCar(
@@ -121,10 +188,14 @@ namespace Unbounded.Editor
             Material wheelMaterial,
             Material accentMaterial,
             InputActionAsset actions,
-            PhysicsMaterial physicMaterial)
+            PhysicsMaterial physicMaterial,
+            TrackRoot track)
         {
+            Pose spawn = track.SamplePose(SpawnDistance);
+
             var car = new GameObject("Player Car");
-            car.transform.position = new Vector3(0f, 0.05f, 0f);
+            car.tag = "Player";
+            car.transform.SetPositionAndRotation(spawn.position + Vector3.up * 0.05f, spawn.rotation);
 
             var body = car.AddComponent<Rigidbody>();
             body.mass = 1200f;
@@ -143,6 +214,9 @@ namespace Unbounded.Editor
 
             var controller = car.AddComponent<CarController>();
             controller.Config = HandlingConfig.Default;
+
+            var surface = car.AddComponent<CarSurfaceAdapter>();
+            surface.Configure(track);
 
             AddVisual(car.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f),
                 new Vector3(1.8f, 1f, 4f), Quaternion.identity, bodyMaterial);
@@ -182,6 +256,18 @@ namespace Unbounded.Editor
             follow.VerticalArmLength = 1f;
             follow.CameraSide = 0.5f;
             follow.Damping = new Vector3(0.08f, 0.2f, 0.15f);
+
+            // Pull the camera in instead of letting a Barrier come between it and
+            // the car. The car carries the Player tag so it never occludes itself.
+            follow.AvoidObstacles = new CinemachineThirdPersonFollow.ObstacleSettings
+            {
+                Enabled = true,
+                CollisionFilter = ~0,
+                IgnoreTag = "Player",
+                CameraRadius = 0.3f,
+                DampingIntoCollision = 0.05f,
+                DampingFromCollision = 0.35f
+            };
         }
 
         private static void AddVisual(
@@ -195,7 +281,7 @@ namespace Unbounded.Editor
         {
             GameObject visual = GameObject.CreatePrimitive(primitive);
             visual.name = name;
-            UnityEngine.Object.DestroyImmediate(visual.GetComponent<Collider>());
+            Object.DestroyImmediate(visual.GetComponent<Collider>());
             visual.transform.SetParent(parent, false);
             visual.transform.localPosition = localPosition;
             visual.transform.localRotation = localRotation;
@@ -203,7 +289,12 @@ namespace Unbounded.Editor
             visual.GetComponent<MeshRenderer>().sharedMaterial = material;
         }
 
-        private static Material CreateMaterial(string path, Color color, float smoothness, Texture2D texture)
+        private static Material CreateMaterial(
+            string path,
+            Color color,
+            float smoothness,
+            Texture2D texture,
+            Vector2 tiling)
         {
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null)
@@ -226,7 +317,7 @@ namespace Unbounded.Editor
             if (texture != null)
             {
                 material.SetTexture("_BaseMap", texture);
-                material.SetTextureScale("_BaseMap", new Vector2(10f, 10f));
+                material.SetTextureScale("_BaseMap", tiling);
             }
 
             EditorUtility.SetDirty(material);
@@ -251,25 +342,53 @@ namespace Unbounded.Editor
             return material;
         }
 
-        private static Texture2D CreateCheckerTexture(string path)
+        private static Texture2D CreateNoiseTexture(string path, Color low, Color high, float frequency)
         {
-            const int size = 64;
-            const int cell = 8;
-            var light = new Color(0.31f, 0.33f, 0.36f);
-            var dark = new Color(0.23f, 0.25f, 0.28f);
-
+            const int size = 128;
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float offset = 0f;
+            foreach (char character in path)
+            {
+                offset += character;
+            }
+
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    texture.SetPixel(x, y, ((x / cell) + (y / cell)) % 2 == 0 ? light : dark);
+                    float u = offset + (float)x / size * frequency;
+                    float v = offset + (float)y / size * frequency;
+                    float noise = Mathf.PerlinNoise(u, v);
+                    texture.SetPixel(x, y, Color.Lerp(low, high, noise));
                 }
             }
 
             texture.Apply();
+            return SaveTexture(path, texture);
+        }
+
+        private static Texture2D CreateStripeTexture(string path, Color stripe, Color baseColor, int stripeCount)
+        {
+            const int size = 128;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool painted = (x * stripeCount / size) % 2 == 0;
+                    texture.SetPixel(x, y, painted ? stripe : baseColor);
+                }
+            }
+
+            texture.Apply();
+            return SaveTexture(path, texture);
+        }
+
+        private static Texture2D SaveTexture(string path, Texture2D texture)
+        {
             File.WriteAllBytes(path, texture.EncodeToPNG());
-            UnityEngine.Object.DestroyImmediate(texture);
+            Object.DestroyImmediate(texture);
 
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);

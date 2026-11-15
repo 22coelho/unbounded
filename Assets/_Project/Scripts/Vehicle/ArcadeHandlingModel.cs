@@ -21,7 +21,14 @@ namespace Unbounded.Vehicle
 
         public float SteeringAngleDegrees => _steeringAngle;
 
-        public HandlingForces Step(VehicleMotion motion, HandlingInput input, float deltaTime)
+        public HandlingForces Step(VehicleMotion motion, HandlingInput input, float deltaTime) =>
+            Step(motion, input, HandlingSurface.Road, deltaTime);
+
+        public HandlingForces Step(
+            VehicleMotion motion,
+            HandlingInput input,
+            HandlingSurface surface,
+            float deltaTime)
         {
             float dt = MathF.Max(deltaTime, 0.0001f);
             float throttle = Clamp01(input.Throttle);
@@ -33,11 +40,11 @@ namespace Unbounded.Vehicle
             float forwardSpeed = motion.ForwardSpeed;
             float speed = MathF.Abs(forwardSpeed);
             float speed01 = Clamp01(speed / _config.MaxSpeed);
-            float grip = Lerp(1f, _config.HighSpeedGrip, speed01);
+            float grip = Lerp(1f, _config.HighSpeedGrip, speed01) * surface.LateralGripMultiplier;
 
             return new HandlingForces
             {
-                DriveForce = ComputeDriveForce(forwardSpeed, throttle, brake),
+                DriveForce = ComputeDriveForce(forwardSpeed, throttle, brake, surface),
                 LateralForce = ComputeLateralForce(motion.LateralSpeed, speed, grip),
                 YawAcceleration = ComputeYawAcceleration(motion.YawRate, forwardSpeed, grip),
                 SteeringAngleDegrees = _steeringAngle
@@ -50,7 +57,11 @@ namespace Unbounded.Vehicle
             _steeringAngle = MoveTowards(_steeringAngle, target, _config.SteeringRate * dt);
         }
 
-        private float ComputeDriveForce(float forwardSpeed, float throttle, float brake)
+        private float ComputeDriveForce(
+            float forwardSpeed,
+            float throttle,
+            float brake,
+            HandlingSurface surface)
         {
             float force = 0f;
 
@@ -69,12 +80,12 @@ namespace Unbounded.Vehicle
             else if (throttle > 0.001f && forwardSpeed < _config.MaxSpeed)
             {
                 float engineAuthority = 1f - Clamp01(forwardSpeed / _config.MaxSpeed);
-                force += _config.EngineForce * throttle * engineAuthority;
+                force += _config.EngineForce * throttle * engineAuthority * surface.EngineForceMultiplier;
             }
 
             if (MathF.Abs(forwardSpeed) > 0.05f)
             {
-                float resistance = _config.RollingResistance +
+                float resistance = _config.RollingResistance * surface.RollingResistanceMultiplier +
                                    _config.DragCoefficient * forwardSpeed * forwardSpeed;
                 force -= MathF.Sign(forwardSpeed) * resistance;
             }
