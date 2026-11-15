@@ -167,7 +167,7 @@ namespace Unbounded.Editor
 
             var track = trackObject.AddComponent<TrackRoot>();
             track.Configure(
-                TrackLayout.Circuit(),
+                TrackLayout.Default(),
                 TrackShape.Default,
                 roadMaterial,
                 kerbMaterial,

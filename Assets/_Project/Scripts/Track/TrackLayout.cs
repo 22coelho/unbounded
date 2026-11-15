@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Unbounded.Track
 {
     /// <summary>
-    /// The authored circuit. One ordered list of control points defines the
-    /// whole Track: straights, sweepers, and a hairpin at the far end.
+    /// The authored Track. One ordered list of control points defines the whole
+    /// Track: straights, sweepers, and a hairpin at the far end.
     /// </summary>
     public static class TrackLayout
     {
@@ -12,7 +12,7 @@ namespace Unbounded.Track
         /// Control points in metres, ordered along the direction of travel, with
         /// the start/finish seam at the origin on a northbound straight.
         /// </summary>
-        public static Vector3[] Circuit() => new[]
+        public static Vector3[] Default() => new[]
         {
             new Vector3(0f, 0f, 0f),
             new Vector3(0f, 0f, 80f),

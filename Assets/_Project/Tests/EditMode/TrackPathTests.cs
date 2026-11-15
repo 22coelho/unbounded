@@ -8,17 +8,34 @@ namespace Unbounded.Tests.EditMode
     {
         private const float Tolerance = 0.05f;
 
-        private static TrackPath CreatePath() => TrackPath.FromControlPoints(TrackLayout.Circuit(), 32);
+        private static TrackPath CreatePath() => TrackPath.FromControlPoints(TrackLayout.Default(), 32);
 
         [Test]
         public void SamplingWrapsAcrossTheStartFinishSeam()
         {
             TrackPath path = CreatePath();
+            const float step = 1f;
 
             Assert.That(path.Length, Is.GreaterThan(500f));
 
-            Assert.That(Vector3.Distance(path.SamplePosition(path.Length), path.SamplePosition(0f)),
-                Is.LessThan(0.001f));
+            // The baked polyline has to close. A step across the seam must cover
+            // the same ground as the steps either side of it; a missing closing
+            // segment would show up here as a jump the length of the gap.
+            float across = Vector3.Distance(
+                path.SamplePosition(path.Length - step), path.SamplePosition(0f));
+            float before = Vector3.Distance(
+                path.SamplePosition(path.Length - 2f * step), path.SamplePosition(path.Length - step));
+            float after = Vector3.Distance(
+                path.SamplePosition(0f), path.SamplePosition(step));
+
+            Assert.That(across, Is.EqualTo(step).Within(0.25f),
+                $"A {step}m step across the seam covers {across}m.");
+            Assert.That(across, Is.EqualTo(before).Within(0.25f),
+                $"The seam is a {across}m step but the one before it is {before}m.");
+            Assert.That(across, Is.EqualTo(after).Within(0.25f),
+                $"The seam is a {across}m step but the one after it is {after}m.");
+
+            // A distance outside [0, Length) lands where the same distance inside it does.
             Assert.That(Vector3.Distance(path.SamplePosition(path.Length + 17.5f), path.SamplePosition(17.5f)),
                 Is.LessThan(0.001f));
             Assert.That(Vector3.Distance(path.SamplePosition(-17.5f), path.SamplePosition(path.Length - 17.5f)),

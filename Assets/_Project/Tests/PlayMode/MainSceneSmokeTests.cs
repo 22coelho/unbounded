@@ -323,6 +323,98 @@ namespace Unbounded.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BarrierHoldsAFastObliqueHit()
+        {
+            yield return LoadMainScene();
+
+            TrackRoot track = FindTrack();
+            TrackShape shape = track.Shape;
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(car, Is.Not.Null, "The Main scene must contain a drivable car.");
+            DisablePlayerInput();
+
+            Rigidbody body = car.GetComponent<Rigidbody>();
+
+            // A glancing blow at speed is the case most likely to tunnel through
+            // a 0.4 m wall: 30 m/s, 30 degrees off the right-hand Barrier.
+            Pose pose = track.SamplePose(20f);
+            Vector3 right = pose.rotation * Vector3.right;
+            const float speed = 30f;
+
+            Teleport(body,
+                pose.position + right * 4f + Vector3.up * 0.1f,
+                Quaternion.AngleAxis(30f, Vector3.up) * pose.rotation);
+            car.SetInput(default);
+            yield return new WaitForFixedUpdate();
+
+            body.linearVelocity = body.rotation * Vector3.forward * speed;
+            Assert.That(body.linearVelocity.magnitude, Is.EqualTo(speed).Within(0.5f));
+
+            float deepest = float.MinValue;
+            float lowest = float.MaxValue;
+            for (int i = 0; i < 120; i++)
+            {
+                yield return new WaitForFixedUpdate();
+                deepest = Mathf.Max(deepest, RightmostCornerLateral(track, body));
+                lowest = Mathf.Min(lowest, body.position.y);
+            }
+
+            Assert.That(deepest, Is.GreaterThan(shape.EdgeOffset),
+                "The car should have reached the Barrier, not stopped short (max lateral " +
+                deepest.ToString("0.0") + " m).");
+            Assert.That(deepest, Is.LessThan(shape.BarrierOffset + 0.15f),
+                "Part of the car got through the Barrier (max lateral " + deepest.ToString("0.0") + " m).");
+            Assert.That(lowest, Is.GreaterThan(-0.5f),
+                "The car fell through the world at the Barrier (lowest y " + lowest.ToString("0.0") + ").");
+
+            // The wall cancels the speed into it but leaves the car sliding
+            // along it, rather than sticking dead or being thrown back.
+            float intoWall = Vector3.Dot(body.linearVelocity, right);
+            Assert.That(intoWall, Is.LessThan(1f),
+                "The Barrier should stop the car heading through it (lateral speed " +
+                intoWall.ToString("0.0") + " m/s).");
+            Assert.That(body.linearVelocity.magnitude, Is.GreaterThan(5f),
+                "The car should keep sliding along the Barrier instead of sticking to it.");
+
+            // Bring the car to a stop against the wall, then reverse away. A car
+            // that cannot get off the wall is trapped even though the wall held.
+            car.SetInput(new HandlingInput { Brake = 1f });
+            for (int i = 0; i < 120; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Vector3 stopped = body.position;
+            for (int i = 0; i < 120; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(Vector3.Distance(stopped, body.position), Is.GreaterThan(2f),
+                "The car should be able to drive away from the Barrier instead of being trapped.");
+        }
+
+        /// <summary>The lateral offset of the car's four collider corners, furthest to the right.</summary>
+        private static float RightmostCornerLateral(TrackRoot track, Rigidbody body)
+        {
+            var collider = body.GetComponent<BoxCollider>();
+            Vector3 centre = collider.center;
+            float deepest = float.MinValue;
+
+            foreach (int side in new[] { -1, 1 })
+            {
+                foreach (int end in new[] { -1, 1 })
+                {
+                    Vector3 corner = body.position + body.rotation * (centre + new Vector3(
+                        collider.size.x * 0.5f * side, 0f, collider.size.z * 0.5f * end));
+                    deepest = Mathf.Max(deepest, track.Project(corner).LateralOffset);
+                }
+            }
+
+            return deepest;
+        }
+
+        [UnityTest]
         public IEnumerator ChaseCameraDoesNotPassThroughBarriers()
         {
             yield return LoadMainScene();
@@ -372,6 +464,69 @@ namespace Unbounded.Tests.PlayMode
             Assert.That(BarrierBetween(barriers, car.transform.position + Vector3.up * 1.1f, eye), Is.False,
                 "A Barrier sits between the camera and the car.");
         }
+
+        [UnityTest]
+        public IEnumerator ChaseCameraPullsInToAvoidAWallBehindTheCar()
+        {
+            yield return LoadMainScene();
+
+            TrackRoot track = FindTrack();
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(car, Is.Not.Null, "The Main scene must contain a drivable car.");
+            DisablePlayerInput();
+
+            Rigidbody body = car.GetComponent<Rigidbody>();
+            Pose pose = track.SamplePose(20f);
+            Teleport(body, pose.position + Vector3.up * 0.1f, pose.rotation);
+            car.SetInput(default);
+            yield return new WaitForFixedUpdate();
+
+            Assert.That(Camera.main, Is.Not.Null);
+            for (int i = 0; i < 120; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            float natural = CameraBehind(car);
+            Assert.That(natural, Is.GreaterThan(5f),
+                "The chase camera should sit well behind the car when nothing is in the way (" +
+                natural.ToString("0.0") + " m).");
+
+            // A wall just beyond where the camera wants to be. The obstacles are
+            // low enough on the real Track that the avoidance rarely has to fire,
+            // so this temporary wall is what proves it is wired up.
+            const float wallOffset = 4.75f;
+            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = "Test Wall";
+            wall.transform.SetPositionAndRotation(
+                car.transform.position - car.transform.forward * wallOffset + Vector3.up * 2.5f,
+                car.transform.rotation);
+            wall.transform.localScale = new Vector3(4f, 5f, 1f);
+
+            try
+            {
+                for (int i = 0; i < 150; i++)
+                {
+                    yield return new WaitForFixedUpdate();
+                }
+
+                float pulledIn = CameraBehind(car);
+                Assert.That(pulledIn, Is.LessThan(wallOffset - 0.55f),
+                    "The camera stayed behind the wall at " + pulledIn.ToString("0.0") + " m.");
+                Assert.That(pulledIn, Is.GreaterThan(1.5f),
+                    "The camera should pull in, not collapse onto the car (" +
+                    pulledIn.ToString("0.0") + " m).");
+            }
+            finally
+            {
+                Object.Destroy(wall);
+            }
+        }
+
+        /// <summary>How far behind the car the camera is, along the car's forward axis.</summary>
+        private static float CameraBehind(CarController car) =>
+            -Vector3.Dot(Camera.main.transform.position - car.transform.position,
+                car.transform.forward);
 
         /// <summary>Whether a point has ended up inside a Barrier wall.</summary>
         private static bool IsInsideBarrier(TrackRoot track, Vector3 point, TrackShape shape)
