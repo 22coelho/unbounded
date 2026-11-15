@@ -1,12 +1,14 @@
 using System.IO;
 using Unbounded.App;
 using Unbounded.Track;
+using Unbounded.UI;
 using Unbounded.Vehicle;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace Unbounded.Editor
 {
@@ -26,9 +28,6 @@ namespace Unbounded.Editor
 
         private const float GroundSize = 600f;
         private static readonly Vector3 GroundCentre = new Vector3(-125f, 0f, 25f);
-
-        /// <summary>How far past the start/finish seam the car begins.</summary>
-        private const float SpawnDistance = 1.5f;
 
         [MenuItem("Unbounded/Build Main Scene")]
         public static void Build()
@@ -112,6 +111,15 @@ namespace Unbounded.Editor
                 track);
             CreateChaseCamera(car.transform);
 
+            var lapProgress = car.GetComponent<LapProgressTracker>();
+            var input = car.GetComponent<PlayerInputReader>();
+            RaceHud hud = CreateHud(lapProgress);
+
+            var raceObject = new GameObject("Race Controller");
+            var race = raceObject.AddComponent<RaceController>();
+            race.Configure(lapProgress, input, hud);
+            EditorUtility.SetDirty(race);
+
             if (!EditorSceneManager.SaveScene(scene, MainScenePath))
             {
                 throw new IOException("Failed to save " + MainScenePath);
@@ -191,7 +199,7 @@ namespace Unbounded.Editor
             PhysicsMaterial physicMaterial,
             TrackRoot track)
         {
-            Pose spawn = track.SamplePose(SpawnDistance);
+            Pose spawn = track.SamplePose(LapProgressTracker.StartDistance);
 
             var car = new GameObject("Player Car");
             car.tag = "Player";
@@ -218,6 +226,9 @@ namespace Unbounded.Editor
             var surface = car.AddComponent<CarSurfaceAdapter>();
             surface.Configure(track);
 
+            var lapProgress = car.AddComponent<LapProgressTracker>();
+            lapProgress.Configure(track, body);
+
             AddVisual(car.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f),
                 new Vector3(1.8f, 1f, 4f), Quaternion.identity, bodyMaterial);
             AddVisual(car.transform, PrimitiveType.Cube, "Cabin", new Vector3(0f, 1.15f, -0.15f),
@@ -236,7 +247,7 @@ namespace Unbounded.Editor
                 new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
 
             var input = car.AddComponent<PlayerInputReader>();
-            input.Configure(actions, controller);
+            input.Configure(actions, controller, lapProgress);
             EditorUtility.SetDirty(input);
 
             return car;
@@ -268,6 +279,155 @@ namespace Unbounded.Editor
                 DampingIntoCollision = 0.05f,
                 DampingFromCollision = 0.35f
             };
+        }
+
+        private static RaceHud CreateHud(LapProgressTracker lapProgress)
+        {
+            var hudObject = new GameObject("HUD");
+            var canvas = hudObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            var scaler = hudObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null)
+            {
+                throw new IOException("The legacy UI font is unavailable.");
+            }
+
+            Text lap = CreateText(hudObject.transform, "Lap Counter", font, 36, TextAnchor.MiddleLeft);
+            RectTransform lapRect = lap.rectTransform;
+            lapRect.anchorMin = new Vector2(0f, 1f);
+            lapRect.anchorMax = new Vector2(0f, 1f);
+            lapRect.pivot = new Vector2(0f, 1f);
+            lapRect.anchoredPosition = new Vector2(36f, -28f);
+            lapRect.sizeDelta = new Vector2(420f, 64f);
+            lap.text = "LAP 1/3";
+
+            Text timer = CreateText(hudObject.transform, "Race Timer", font, 34, TextAnchor.MiddleRight);
+            RectTransform timerRect = timer.rectTransform;
+            timerRect.anchorMin = new Vector2(1f, 1f);
+            timerRect.anchorMax = new Vector2(1f, 1f);
+            timerRect.pivot = new Vector2(1f, 1f);
+            timerRect.anchoredPosition = new Vector2(-36f, -28f);
+            timerRect.sizeDelta = new Vector2(420f, 64f);
+            timer.text = "0:00.00";
+
+            Text wrongWay = CreateText(hudObject.transform, "Wrong Way", font, 44, TextAnchor.MiddleCenter);
+            RectTransform wrongWayRect = wrongWay.rectTransform;
+            wrongWayRect.anchorMin = new Vector2(0.5f, 1f);
+            wrongWayRect.anchorMax = new Vector2(0.5f, 1f);
+            wrongWayRect.pivot = new Vector2(0.5f, 1f);
+            wrongWayRect.anchoredPosition = new Vector2(0f, -96f);
+            wrongWayRect.sizeDelta = new Vector2(640f, 64f);
+            wrongWay.text = "WRONG WAY";
+            wrongWay.fontStyle = FontStyle.Bold;
+            wrongWay.color = new Color(1f, 0.27f, 0.22f);
+            wrongWay.gameObject.SetActive(false);
+
+            Text countdown = CreateText(hudObject.transform, "Countdown", font, 150, TextAnchor.MiddleCenter);
+            RectTransform countdownRect = countdown.rectTransform;
+            countdownRect.anchorMin = new Vector2(0.5f, 0.5f);
+            countdownRect.anchorMax = new Vector2(0.5f, 0.5f);
+            countdownRect.pivot = new Vector2(0.5f, 0.5f);
+            countdownRect.anchoredPosition = new Vector2(0f, 130f);
+            countdownRect.sizeDelta = new Vector2(720f, 260f);
+            countdown.text = "3";
+            countdown.fontStyle = FontStyle.Bold;
+            countdown.color = new Color(1f, 0.93f, 0.55f);
+            countdown.gameObject.SetActive(false);
+
+            GameObject finishScreen = CreatePanel(hudObject.transform, "Finish Screen", font,
+                "RACE COMPLETE", 86, out Text finishSummary);
+            finishSummary.text = "TIME   0:00.00\n\nPRESS R / Y TO RESTART";
+
+            GameObject pauseScreen = CreatePanel(hudObject.transform, "Pause Screen", font,
+                "PAUSED", 86, out Text pauseSummary);
+            pauseSummary.text = "ESC / START TO RESUME\nQ / SELECT TO QUIT";
+
+            var hud = hudObject.AddComponent<RaceHud>();
+            hud.Configure(lap, wrongWay);
+            hud.ConfigureRace(countdown, timer, finishScreen, finishSummary, pauseScreen);
+            hud.Bind(lapProgress);
+            return hud;
+        }
+
+        /// <summary>
+        /// A full-screen dark panel with a title and a body, for the finish and
+        /// pause screens. It blocks nothing: there is no EventSystem, and the
+        /// panels are toggled from the Race flow.
+        /// </summary>
+        private static GameObject CreatePanel(
+            Transform parent,
+            string name,
+            Font font,
+            string titleText,
+            int titleSize,
+            out Text body)
+        {
+            var panel = new GameObject(name, typeof(RectTransform));
+            panel.transform.SetParent(parent, false);
+            var rect = panel.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var background = panel.AddComponent<Image>();
+            background.color = new Color(0.01f, 0.01f, 0.02f, 0.82f);
+            background.raycastTarget = false;
+
+            Text title = CreateText(panel.transform, "Title", font, titleSize, TextAnchor.MiddleCenter);
+            RectTransform titleRect = title.rectTransform;
+            titleRect.anchorMin = new Vector2(0.5f, 0.5f);
+            titleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            titleRect.pivot = new Vector2(0.5f, 0.5f);
+            titleRect.anchoredPosition = new Vector2(0f, 110f);
+            titleRect.sizeDelta = new Vector2(1400f, 180f);
+            title.text = titleText;
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(1f, 0.93f, 0.55f);
+
+            body = CreateText(panel.transform, "Summary", font, 36, TextAnchor.UpperCenter);
+            RectTransform bodyRect = body.rectTransform;
+            bodyRect.anchorMin = new Vector2(0.5f, 0.5f);
+            bodyRect.anchorMax = new Vector2(0.5f, 0.5f);
+            bodyRect.pivot = new Vector2(0.5f, 1f);
+            bodyRect.anchoredPosition = new Vector2(0f, -10f);
+            bodyRect.sizeDelta = new Vector2(1400f, 260f);
+
+            panel.SetActive(false);
+            return panel;
+        }
+
+        private static Text CreateText(
+            Transform parent,
+            string name,
+            Font font,
+            int size,
+            TextAnchor alignment)
+        {
+            var textObject = new GameObject(name, typeof(RectTransform));
+            textObject.transform.SetParent(parent, false);
+
+            var text = textObject.AddComponent<Text>();
+            text.font = font;
+            text.fontSize = size;
+            text.alignment = alignment;
+            text.color = Color.white;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
+
+            var outline = textObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            return text;
         }
 
         private static void AddVisual(

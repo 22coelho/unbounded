@@ -7,23 +7,42 @@ namespace Unbounded.App
     /// <summary>
     /// Reads the Drive action map and feeds the car. Kept in the composition
     /// assembly so the Vehicle assembly stays free of input-system details.
+    /// Driving input can be gated off, so the Countdown can hold the car and
+    /// the finish or pause screens can take the controls away.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class PlayerInputReader : MonoBehaviour
     {
         [SerializeField] private InputActionAsset _actions;
         [SerializeField] private CarController _car;
+        [SerializeField] private LapProgressTracker _lapProgress;
 
         private InputActionMap _driveMap;
         private InputAction _steer;
         private InputAction _throttle;
         private InputAction _brake;
+        private InputAction _reset;
+        private InputAction _pause;
+        private InputAction _quit;
+
+        /// <summary>Whether throttle, steering, brake, and reset reach the car.</summary>
+        public bool ControlsEnabled { get; set; } = true;
+
+        /// <summary>The Pause button was pressed this frame. Read while paused too.</summary>
+        public bool PausePressed { get; private set; }
+
+        /// <summary>The Quit button was pressed this frame. Read while paused too.</summary>
+        public bool QuitPressed { get; private set; }
+
+        /// <summary>The Reset button was pressed this frame.</summary>
+        public bool ResetPressed { get; private set; }
 
         /// <summary>Wires the reader when the scene is built from the editor.</summary>
-        public void Configure(InputActionAsset actions, CarController car)
+        public void Configure(InputActionAsset actions, CarController car, LapProgressTracker lapProgress)
         {
             _actions = actions;
             _car = car;
+            _lapProgress = lapProgress;
         }
 
         private void Awake()
@@ -45,6 +64,9 @@ namespace Unbounded.App
             _steer = _driveMap.FindAction("Steer", true);
             _throttle = _driveMap.FindAction("Throttle", true);
             _brake = _driveMap.FindAction("Brake", true);
+            _reset = _driveMap.FindAction("Reset", true);
+            _pause = _driveMap.FindAction("Pause", true);
+            _quit = _driveMap.FindAction("Quit", true);
         }
 
         private void OnEnable()
@@ -63,9 +85,24 @@ namespace Unbounded.App
 
         private void Update()
         {
+            PausePressed = _pause != null && _pause.WasPressedThisFrame();
+            QuitPressed = _quit != null && _quit.WasPressedThisFrame();
+            ResetPressed = _reset != null && _reset.WasPressedThisFrame();
+
             if (_car == null)
             {
                 return;
+            }
+
+            if (!ControlsEnabled)
+            {
+                _car.SetInput(default);
+                return;
+            }
+
+            if (ResetPressed && _lapProgress != null)
+            {
+                _lapProgress.ResetCar();
             }
 
             _car.SetInput(new HandlingInput

@@ -6,7 +6,8 @@
         "Unbounded.Vehicle",
         "Unbounded.Track",
         "Unbounded.AI",
-        "Unbounded.Race"
+        "Unbounded.Race",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

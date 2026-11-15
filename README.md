@@ -7,8 +7,11 @@ one track, one car, and five AI opponents over three laps.
 ## Status
 
 Milestone 1 in progress. The handling model, its Rigidbody adapter, gamepad and
-keyboard input, a generated closed circuit with Kerbs and Barriers, and a chase
-camera are in place.
+keyboard input, a generated closed circuit with Kerbs and Barriers, validated
+Laps with ordered Checkpoints and reset, a HUD with the lap counter and
+wrong-way warning, a chase camera, and the solo Race loop — Countdown, race
+timer, pause, three-Lap finish, and restart without a scene reload — are in
+place.
 
 ## Requirements
 
@@ -59,7 +62,7 @@ with a 60-second gameplay clip.
 
 ## Controls
 
-Handbrake, nitro, reset, and pause arrive with later milestone tickets.
+Handbrake and nitro arrive with later milestone tickets.
 
 | Action | Gamepad | Keyboard |
 | --- | --- | --- |
@@ -69,4 +72,6 @@ Handbrake, nitro, reset, and pause arrive with later milestone tickets.
 | Handbrake | B / Circle | Space |
 | Nitro | A / Cross | Left Shift |
 | Reset to track | Y / Triangle | R |
-| Pause | Start | Escape |
+| Pause / resume | Start | Escape |
+| Quit from pause | Select | Q |
+| Restart after the finish | Y / Triangle | R |

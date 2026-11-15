@@ -19,12 +19,16 @@ namespace Unbounded.Track
         [SerializeField] private Material _barrierMaterial;
         [SerializeField] private Material _startLineMaterial;
         [SerializeField] private PhysicsMaterial _surfacePhysicsMaterial;
+        [SerializeField] private int _checkpointCount = CheckpointRoute.DefaultCount;
 
         private readonly List<Mesh> _meshes = new List<Mesh>();
         private Transform _generated;
         private bool _rebuilding;
 
         public TrackPath Path { get; private set; }
+
+        /// <summary>The ordered Checkpoints of a Lap, derived from the Centreline.</summary>
+        public CheckpointRoute Checkpoints { get; private set; }
 
         public TrackShape Shape => _shape;
 
@@ -92,10 +96,12 @@ namespace Unbounded.Track
                 if (_controlPoints == null || _controlPoints.Length < 3)
                 {
                     Path = null;
+                    Checkpoints = null;
                     return;
                 }
 
                 Path = TrackPath.FromControlPoints(_controlPoints);
+                Checkpoints = new CheckpointRoute(Path.Length, Mathf.Max(1, _checkpointCount));
 
                 var generated = new GameObject("Generated") { hideFlags = HideFlags.DontSave };
                 generated.transform.SetParent(transform, false);

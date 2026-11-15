@@ -10,7 +10,8 @@
         "Unbounded.UI",
         "Unbounded.App",
         "Unity.Cinemachine",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

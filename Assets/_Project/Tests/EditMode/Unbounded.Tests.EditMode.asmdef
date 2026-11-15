@@ -5,6 +5,7 @@
         "Unbounded.Core",
         "Unbounded.Vehicle",
         "Unbounded.Track",
+        "Unbounded.Race",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

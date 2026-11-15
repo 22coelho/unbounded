@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Unbounded.App;
+using Unbounded.Race;
 using Unbounded.Track;
+using Unbounded.UI;
 using Unbounded.Vehicle;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace Unbounded.Tests.PlayMode
 {
@@ -690,6 +693,341 @@ namespace Unbounded.Tests.PlayMode
             float seconds = steps * Time.fixedDeltaTime;
             Assert.That(path.Length / seconds, Is.GreaterThan(20f),
                 $"A full lap took {seconds:0} seconds, which is too slow to count as driving at speed.");
+
+            LapProgressTracker lapProgress = Object.FindAnyObjectByType<LapProgressTracker>();
+            Assert.That(lapProgress, Is.Not.Null, "The car must track its Lap progress.");
+            Assert.That(lapProgress.LapsCompleted, Is.GreaterThanOrEqualTo(1),
+                "Driving the whole circuit must count a Lap.");
+
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Text lapText = hud.transform.Find("Lap Counter").GetComponent<Text>();
+            Assert.That(lapText.text, Is.EqualTo("LAP 2/3"),
+                "The HUD must advance to the next Lap once the line is crossed.");
+        }
+
+        [UnityTest]
+        public IEnumerator HudShowsTheLapAndWarnsWhenTheCarTurnsAround()
+        {
+            yield return LoadMainScene();
+
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Assert.That(hud, Is.Not.Null, "The Main scene must contain the HUD.");
+
+            Text lapText = hud.transform.Find("Lap Counter").GetComponent<Text>();
+            Text wrongWayText = hud.transform.Find("Wrong Way").GetComponent<Text>();
+            Assert.That(lapText, Is.Not.Null);
+            Assert.That(wrongWayText, Is.Not.Null);
+
+            Assert.That(lapText.text, Is.EqualTo("LAP 1/3"),
+                "The HUD must show the Lap being driven and the total from the start.");
+            Assert.That(wrongWayText.gameObject.activeSelf, Is.False,
+                "No wrong-way warning before the car has moved.");
+
+            TrackRoot track = FindTrack();
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(car, Is.Not.Null);
+            DisablePlayerInput();
+
+            Rigidbody body = car.GetComponent<Rigidbody>();
+            Pose pose = track.SamplePose(30f);
+
+            Teleport(body, pose.position + Vector3.up * 0.1f, pose.rotation * Quaternion.Euler(0f, 180f, 0f));
+            yield return new WaitForFixedUpdate();
+
+            car.SetInput(new HandlingInput { Throttle = 1f });
+            for (int i = 0; i < 80; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(wrongWayText.gameObject.activeSelf, Is.True,
+                "Driving against the Track direction must show the warning.");
+
+            Teleport(body, pose.position + Vector3.up * 0.1f, pose.rotation);
+            car.SetInput(new HandlingInput { Throttle = 1f });
+            for (int i = 0; i < 60; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(wrongWayText.gameObject.activeSelf, Is.False,
+                "The warning must clear once the car faces along the Track again.");
+        }
+
+        [UnityTest]
+        public IEnumerator ResetReturnsTheCarToTheLastCheckpointItPassed()
+        {
+            yield return LoadMainScene();
+
+            TrackRoot track = FindTrack();
+            Assert.That(track.Checkpoints, Is.Not.Null, "The Track must expose its Checkpoints.");
+
+            LapProgressTracker tracker = Object.FindAnyObjectByType<LapProgressTracker>();
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(tracker, Is.Not.Null, "The car must track its Lap progress.");
+            Assert.That(car, Is.Not.Null);
+            DisablePlayerInput();
+
+            Rigidbody body = car.GetComponent<Rigidbody>();
+            float checkpoint = track.Checkpoints.DistanceAt(0);
+
+            // Move along the Track in steps the Lap counter accepts, so the
+            // first Checkpoint is genuinely passed.
+            for (float distance = 5f; distance <= checkpoint + 25f; distance += 20f)
+            {
+                Pose step = track.SamplePose(distance);
+                Teleport(body, step.position + Vector3.up * 0.1f, step.rotation);
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(tracker.ResetDistance, Is.EqualTo(checkpoint).Within(1f),
+                "The reset point must be the last Checkpoint passed.");
+
+            Pose away = track.SamplePose(checkpoint + 80f);
+            Teleport(body, away.position + Vector3.up * 0.1f, away.rotation);
+            body.linearVelocity = away.rotation * Vector3.forward * 15f;
+            yield return new WaitForFixedUpdate();
+
+            tracker.ResetCar();
+            yield return new WaitForFixedUpdate();
+
+            float resetDistance = track.Project(body.position).Distance;
+            Assert.That(resetDistance, Is.EqualTo(checkpoint).Within(1f),
+                "Reset must return the car to the last Checkpoint, not the line.");
+            Assert.That(body.linearVelocity.magnitude, Is.LessThan(0.5f),
+                "Reset must leave the car at rest.");
+            Assert.That(Vector3.Dot(body.rotation * Vector3.forward,
+                track.SamplePose(checkpoint).rotation * Vector3.forward), Is.GreaterThan(0.99f),
+                "Reset must point the car along the Track.");
+        }
+
+        [UnityTest]
+        public IEnumerator RaceStartsWithACountdownThenRunsTheClock()
+        {
+            yield return LoadMainScene();
+
+            RaceController race = Object.FindAnyObjectByType<RaceController>();
+            Assert.That(race, Is.Not.Null, "The Main scene must contain the Race flow.");
+            Assert.That(race.Race, Is.Not.Null);
+
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Text countdown = hud.transform.Find("Countdown").GetComponent<Text>();
+            Text timer = hud.transform.Find("Race Timer").GetComponent<Text>();
+            PlayerInputReader input = Object.FindAnyObjectByType<PlayerInputReader>();
+            Assert.That(countdown, Is.Not.Null);
+            Assert.That(timer, Is.Not.Null);
+            Assert.That(input, Is.Not.Null);
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Countdown));
+            Assert.That(race.Race.RaceTime, Is.Zero, "The clock must not run before the Countdown ends.");
+            Assert.That(countdown.gameObject.activeSelf, Is.True, "The Countdown must be on screen.");
+            Assert.That(countdown.text, Is.EqualTo("3"));
+            Assert.That(input.ControlsEnabled, Is.False, "Driving input must be ignored during the Countdown.");
+
+            float countdownDeadline = Time.unscaledTime + 6f;
+            while (race.Race.Phase == RacePhase.Countdown && Time.unscaledTime < countdownDeadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Racing),
+                "The Countdown must end on its own.");
+            Assert.That(input.ControlsEnabled, Is.True, "Driving input must reach the car once the Race is running.");
+            Assert.That(countdown.text, Is.EqualTo("GO!"), "The start should read as a go, not a silent cut.");
+
+            float clockDeadline = Time.unscaledTime + 2f;
+            while (timer.text == "0:00.00" && Time.unscaledTime < clockDeadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(timer.text, Is.Not.EqualTo("0:00.00"),
+                "The Race timer must run from the end of the Countdown.");
+
+            float goDeadline = Time.unscaledTime + 3f;
+            while (countdown.gameObject.activeSelf && Time.unscaledTime < goDeadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(countdown.gameObject.activeSelf, Is.False,
+                "The Countdown display must clear once the Race is under way.");
+        }
+
+        [UnityTest]
+        public IEnumerator RestartReturnsTheCarAndTheLapCounterToTheStart()
+        {
+            yield return LoadMainScene();
+
+            RaceController race = Object.FindAnyObjectByType<RaceController>();
+            LapProgressTracker tracker = Object.FindAnyObjectByType<LapProgressTracker>();
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(race, Is.Not.Null);
+            Assert.That(tracker, Is.Not.Null);
+            Assert.That(car, Is.Not.Null);
+            DisablePlayerInput();
+
+            float startDeadline = Time.unscaledTime + 6f;
+            while (race.Race.Phase == RacePhase.Countdown && Time.unscaledTime < startDeadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Racing));
+
+            car.SetInput(new HandlingInput { Throttle = 1f });
+            for (int i = 0; i < 100; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Vector3 moved = car.transform.position;
+            car.SetInput(default);
+
+            race.RestartRace();
+            yield return new WaitForFixedUpdate();
+            yield return null;
+
+            TrackRoot track = FindTrack();
+            Pose start = track.SamplePose(LapProgressTracker.StartDistance);
+            Vector3 offset = car.transform.position - start.position;
+            offset.y = 0f;
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Countdown), "Restart must return to the Countdown.");
+            Assert.That(race.Race.RaceTime, Is.Zero);
+            Assert.That(race.Race.LapsCompleted, Is.Zero);
+            Assert.That(race.Race.LapTimes, Is.Empty);
+            Assert.That(tracker.LapsCompleted, Is.Zero);
+            Assert.That(offset.magnitude, Is.LessThan(3f),
+                "Restart must put the car back on the Grid without reloading the scene.");
+            Assert.That(Vector3.Distance(moved, car.transform.position), Is.GreaterThan(5f),
+                "The test failed to move the car before restarting.");
+            Assert.That(car.GetComponent<Rigidbody>().linearVelocity.magnitude, Is.LessThan(0.5f),
+                "Restart must leave the car at rest.");
+
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Text lapText = hud.transform.Find("Lap Counter").GetComponent<Text>();
+            Assert.That(lapText.text, Is.EqualTo("LAP 1/3"),
+                "Restart must clear the previous Laps from the HUD too.");
+        }
+
+        [UnityTest]
+        public IEnumerator TheFinishScreenAppearsAfterTheFinalLap()
+        {
+            yield return LoadMainScene();
+
+            RaceController race = Object.FindAnyObjectByType<RaceController>();
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Assert.That(race, Is.Not.Null);
+            Assert.That(hud, Is.Not.Null);
+            DisablePlayerInput();
+
+            float startDeadline = Time.unscaledTime + 6f;
+            while (race.Race.Phase == RacePhase.Countdown && Time.unscaledTime < startDeadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Racing));
+
+            GameObject finishScreen = hud.transform.Find("Finish Screen").gameObject;
+            Text summary = finishScreen.transform.Find("Summary").GetComponent<Text>();
+            Assert.That(finishScreen.activeSelf, Is.False, "The finish screen must stay hidden during the Race.");
+
+            // The Race flow records Laps from the validated Lap events; driving
+            // three full Laps in real time would only retest the Lap counter.
+            for (int lap = 0; lap < 3; lap++)
+            {
+                race.Race.CompleteLap();
+            }
+
+            yield return null;
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Finished));
+            Assert.That(finishScreen.activeSelf, Is.True, "The finish screen must appear once the Race ends.");
+            Assert.That(summary.text, Does.Contain("TIME"), "The finish screen must show the Race time.");
+
+            string stopped = hud.transform.Find("Race Timer").GetComponent<Text>().text;
+            yield return new WaitForSecondsRealtime(0.4f);
+
+            Assert.That(hud.transform.Find("Race Timer").GetComponent<Text>().text, Is.EqualTo(stopped),
+                "The Race timer must stop at the finish.");
+
+            race.RestartRace();
+            yield return null;
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Countdown));
+            Assert.That(finishScreen.activeSelf, Is.False, "Restart must clear the finish screen.");
+        }
+
+        [UnityTest]
+        public IEnumerator PauseFreezesTheRaceAndResumeContinuesIt()
+        {
+            yield return LoadMainScene();
+
+            RaceController race = Object.FindAnyObjectByType<RaceController>();
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Assert.That(race, Is.Not.Null);
+            Assert.That(car, Is.Not.Null);
+            Assert.That(hud, Is.Not.Null);
+            DisablePlayerInput();
+
+            float startDeadline = Time.unscaledTime + 6f;
+            while (race.Race.Phase == RacePhase.Countdown && Time.unscaledTime < startDeadline)
+            {
+                yield return null;
+            }
+
+            car.SetInput(new HandlingInput { Throttle = 1f });
+            for (int i = 0; i < 60; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            GameObject pauseScreen = hud.transform.Find("Pause Screen").gameObject;
+            try
+            {
+                race.SetPaused(true);
+                yield return null;
+
+                Assert.That(Time.timeScale, Is.Zero, "Pause must stop the simulation clock.");
+                Assert.That(race.IsPaused, Is.True);
+                Assert.That(pauseScreen.activeSelf, Is.True, "Pause must show the pause screen.");
+
+                Vector3 held = car.transform.position;
+                float heldTime = race.Race.RaceTime;
+
+                yield return new WaitForSecondsRealtime(0.4f);
+
+                Assert.That(car.transform.position, Is.EqualTo(held),
+                    "Pause must freeze the car where it was.");
+                Assert.That(race.Race.RaceTime, Is.EqualTo(heldTime),
+                    "Pause must freeze the Race timer.");
+
+                race.SetPaused(false);
+                yield return null;
+
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+                Assert.That(race.IsPaused, Is.False);
+                Assert.That(pauseScreen.activeSelf, Is.False);
+
+                Vector3 resumed = car.transform.position;
+                for (int i = 0; i < 60; i++)
+                {
+                    yield return new WaitForFixedUpdate();
+                }
+
+                Assert.That(race.Race.RaceTime, Is.GreaterThan(heldTime),
+                    "Resume must continue the Race timer from where it stopped.");
+                Assert.That(Vector3.Distance(resumed, car.transform.position), Is.GreaterThan(2f),
+                    "Resume must continue the Race from the same state, not from rest.");
+            }
+            finally
+            {
+                race.SetPaused(false);
+                Time.timeScale = 1f;
+            }
         }
 
         /// <summary>
