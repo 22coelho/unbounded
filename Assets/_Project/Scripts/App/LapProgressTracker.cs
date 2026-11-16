@@ -51,6 +51,13 @@ namespace Unbounded.App
         /// <summary>Validated Laps completed this Race.</summary>
         public int LapsCompleted => _counter?.Lap ?? 0;
 
+        /// <summary>
+        /// Metres the car has covered along the Track this Race, counting
+        /// completed Laps. It never goes backwards, so a car that crosses the
+        /// line the wrong way does not lose the Laps it has banked.
+        /// </summary>
+        public float Progress { get; private set; }
+
         /// <summary>Where a reset would return the car.</summary>
         public float ResetDistance => _counter?.ResetDistance ?? 0f;
 
@@ -62,6 +69,7 @@ namespace Unbounded.App
             }
 
             BuildCounter();
+            Progress = StartDistance;
         }
 
         private void FixedUpdate()
@@ -78,6 +86,8 @@ namespace Unbounded.App
             {
                 LapCompleted?.Invoke();
             }
+
+            Progress = Mathf.Max(Progress, LapsCompleted * _track.Path.Length + distance);
 
             Vector3 trackForward = _track.transform.TransformDirection(
                 _track.Path.SampleDirection(distance));
@@ -112,6 +122,7 @@ namespace Unbounded.App
 
             _counter = new LapCounter(_track.Checkpoints);
             _wrongWay.Reset();
+            Progress = StartDistance;
             PlaceOnTrack(StartDistance);
         }
 

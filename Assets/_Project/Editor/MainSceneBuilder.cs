@@ -1,4 +1,5 @@
 using System.IO;
+using Unbounded.AI;
 using Unbounded.App;
 using Unbounded.Track;
 using Unbounded.UI;
@@ -102,7 +103,7 @@ namespace Unbounded.Editor
                 barrierMaterial,
                 startLineMaterial,
                 frictionless);
-            GameObject car = CreateCar(
+            GameObject car = CreatePlayerCar(
                 bodyMaterial,
                 wheelMaterial,
                 startLineMaterial,
@@ -114,10 +115,17 @@ namespace Unbounded.Editor
             var lapProgress = car.GetComponent<LapProgressTracker>();
             var input = car.GetComponent<PlayerInputReader>();
             RaceHud hud = CreateHud(lapProgress);
+            AiDriver[] opponents = CreateOpponents(
+                bodyMaterial,
+                wheelMaterial,
+                startLineMaterial,
+                frictionless,
+                track,
+                lapProgress);
 
             var raceObject = new GameObject("Race Controller");
             var race = raceObject.AddComponent<RaceController>();
-            race.Configure(lapProgress, input, hud);
+            race.Configure(lapProgress, input, hud, opponents: opponents);
             EditorUtility.SetDirty(race);
 
             if (!EditorSceneManager.SaveScene(scene, MainScenePath))
@@ -191,7 +199,7 @@ namespace Unbounded.Editor
             return track;
         }
 
-        private static GameObject CreateCar(
+        private static GameObject CreatePlayerCar(
             Material bodyMaterial,
             Material wheelMaterial,
             Material accentMaterial,
@@ -199,10 +207,81 @@ namespace Unbounded.Editor
             PhysicsMaterial physicMaterial,
             TrackRoot track)
         {
-            Pose spawn = track.SamplePose(LapProgressTracker.StartDistance);
-
-            var car = new GameObject("Player Car");
+            GameObject car = CreateCar(
+                "Player Car",
+                track.SamplePose(LapProgressTracker.StartDistance),
+                bodyMaterial,
+                wheelMaterial,
+                accentMaterial,
+                physicMaterial,
+                track,
+                out CarController controller);
             car.tag = "Player";
+
+            var lapProgress = car.AddComponent<LapProgressTracker>();
+            lapProgress.Configure(track, car.GetComponent<Rigidbody>());
+
+            var input = car.AddComponent<PlayerInputReader>();
+            input.Configure(actions, controller, lapProgress);
+            EditorUtility.SetDirty(input);
+
+            return car;
+        }
+
+        /// <summary>
+        /// Fills the Grid ahead of the player with opponents. Each has a small
+        /// pace offset, so the field spreads over a Race instead of forming one
+        /// train, but they all drive the same car.
+        /// </summary>
+        private static AiDriver[] CreateOpponents(
+            Material bodyMaterial,
+            Material wheelMaterial,
+            Material accentMaterial,
+            PhysicsMaterial physicMaterial,
+            TrackRoot track,
+            LapProgressTracker player)
+        {
+            var opponents = new AiDriver[RaceGrid.OpponentCount];
+
+            for (int slot = 0; slot < opponents.Length; slot++)
+            {
+                float distance = RaceGrid.DistanceFor(slot);
+                float lateral = RaceGrid.LateralFor(slot);
+
+                GameObject car = CreateCar(
+                    "Opponent " + (slot + 1),
+                    track.SamplePose(distance, lateral),
+                    bodyMaterial,
+                    wheelMaterial,
+                    accentMaterial,
+                    physicMaterial,
+                    track,
+                    out CarController controller);
+
+                AiConfig config = AiConfig.Default;
+                config.Pace = 0.93f + slot * 0.015f;
+
+                var driver = car.AddComponent<AiDriver>();
+                driver.Configure(track, controller, car.GetComponent<Rigidbody>(), player, config, distance, lateral);
+                EditorUtility.SetDirty(driver);
+
+                opponents[slot] = driver;
+            }
+
+            return opponents;
+        }
+
+        private static GameObject CreateCar(
+            string name,
+            Pose spawn,
+            Material bodyMaterial,
+            Material wheelMaterial,
+            Material accentMaterial,
+            PhysicsMaterial physicMaterial,
+            TrackRoot track,
+            out CarController controller)
+        {
+            var car = new GameObject(name);
             car.transform.SetPositionAndRotation(spawn.position + Vector3.up * 0.05f, spawn.rotation);
 
             var body = car.AddComponent<Rigidbody>();
@@ -220,14 +299,11 @@ namespace Unbounded.Editor
             collider.size = new Vector3(1.8f, 1f, 4f);
             collider.sharedMaterial = physicMaterial;
 
-            var controller = car.AddComponent<CarController>();
+            controller = car.AddComponent<CarController>();
             controller.Config = HandlingConfig.Default;
 
             var surface = car.AddComponent<CarSurfaceAdapter>();
             surface.Configure(track);
-
-            var lapProgress = car.AddComponent<LapProgressTracker>();
-            lapProgress.Configure(track, body);
 
             AddVisual(car.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f),
                 new Vector3(1.8f, 1f, 4f), Quaternion.identity, bodyMaterial);
@@ -245,10 +321,6 @@ namespace Unbounded.Editor
                 new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
             AddVisual(car.transform, PrimitiveType.Cylinder, "Wheel RR", new Vector3(0.9f, 0.35f, -1.25f),
                 new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
-
-            var input = car.AddComponent<PlayerInputReader>();
-            input.Configure(actions, controller, lapProgress);
-            EditorUtility.SetDirty(input);
 
             return car;
         }

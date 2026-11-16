@@ -19,6 +19,7 @@ namespace Unbounded.App
         [SerializeField] private LapProgressTracker _lapProgress;
         [SerializeField] private PlayerInputReader _input;
         [SerializeField] private RaceHud _hud;
+        [SerializeField] private AiDriver[] _opponents = new AiDriver[0];
         [SerializeField] private int _totalLaps = RaceState.DefaultLaps;
         [SerializeField] private float _countdownSeconds = RaceState.DefaultCountdown;
 
@@ -35,11 +36,12 @@ namespace Unbounded.App
 
         /// <summary>Wires the flow when the scene is built from the editor.</summary>
         public void Configure(LapProgressTracker lapProgress, PlayerInputReader input, RaceHud hud,
-            int totalLaps = RaceState.DefaultLaps)
+            int totalLaps = RaceState.DefaultLaps, AiDriver[] opponents = null)
         {
             _lapProgress = lapProgress;
             _input = input;
             _hud = hud;
+            _opponents = opponents ?? new AiDriver[0];
             _totalLaps = Mathf.Max(1, totalLaps);
             BuildRace();
         }
@@ -62,10 +64,8 @@ namespace Unbounded.App
             Time.timeScale = 1f;
 
             _lapProgress?.RestartLap();
-            if (_input != null)
-            {
-                _input.ControlsEnabled = false;
-            }
+            ReturnOpponentsToTheGrid();
+            ApplyControls(false);
 
             _hud?.HideFinish();
             _hud?.SetPaused(false);
@@ -87,6 +87,24 @@ namespace Unbounded.App
             if (_hud == null)
             {
                 _hud = FindAnyObjectByType<RaceHud>();
+            }
+
+            if (_opponents == null || _opponents.Length == 0)
+            {
+                _opponents = FindObjectsByType<AiDriver>();
+            }
+
+            // The opponents wake before the Track builds its path, so their
+            // Grid distance is seeded here, once the Track is ready.
+            if (_opponents != null)
+            {
+                foreach (AiDriver opponent in _opponents)
+                {
+                    if (opponent != null)
+                    {
+                        opponent.SeedGridProgress();
+                    }
+                }
             }
 
             BuildRace();
@@ -159,10 +177,7 @@ namespace Unbounded.App
                 return;
             }
 
-            if (_input != null)
-            {
-                _input.ControlsEnabled = _race.Phase == RacePhase.Racing;
-            }
+            ApplyControls(_race.Phase == RacePhase.Racing);
 
             RefreshHud();
         }
@@ -186,10 +201,7 @@ namespace Unbounded.App
             _paused = paused;
             Time.timeScale = paused ? 0f : 1f;
 
-            if (_input != null)
-            {
-                _input.ControlsEnabled = !paused && _race.Phase == RacePhase.Racing;
-            }
+            ApplyControls(!paused && _race.Phase == RacePhase.Racing);
 
             _hud?.SetPaused(paused);
         }
@@ -213,9 +225,43 @@ namespace Unbounded.App
             _paused = false;
             _goRemaining = 0f;
 
+            ApplyControls(_race.Phase == RacePhase.Racing);
+        }
+
+        private void ApplyControls(bool enabled)
+        {
             if (_input != null)
             {
-                _input.ControlsEnabled = _race.Phase == RacePhase.Racing;
+                _input.ControlsEnabled = enabled;
+            }
+
+            if (_opponents == null)
+            {
+                return;
+            }
+
+            foreach (AiDriver opponent in _opponents)
+            {
+                if (opponent != null)
+                {
+                    opponent.ControlsEnabled = enabled;
+                }
+            }
+        }
+
+        private void ReturnOpponentsToTheGrid()
+        {
+            if (_opponents == null)
+            {
+                return;
+            }
+
+            foreach (AiDriver opponent in _opponents)
+            {
+                if (opponent != null)
+                {
+                    opponent.ReturnToGrid();
+                }
             }
         }
 

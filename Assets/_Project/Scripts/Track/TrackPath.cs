@@ -69,6 +69,21 @@ namespace Unbounded.Track
             return new TrackPath(points.ToArray());
         }
 
+        /// <summary>
+        /// Wraps an already sampled closed polyline. The Racing line is built by
+        /// moving Centreline samples sideways, so it arrives as points rather
+        /// than as control points to spline.
+        /// </summary>
+        internal static TrackPath FromPolyline(Vector3[] points)
+        {
+            if (points == null || points.Length < 3)
+            {
+                throw new ArgumentException("A closed polyline needs at least three points.", nameof(points));
+            }
+
+            return new TrackPath(points);
+        }
+
         /// <summary>Normalises a distance into [0, Length), wrapping at the seam.</summary>
         public float WrapDistance(float distance)
         {

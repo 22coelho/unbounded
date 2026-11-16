@@ -27,6 +27,9 @@ namespace Unbounded.Track
 
         public TrackPath Path { get; private set; }
 
+        /// <summary>The AI Racing line, derived from the Centreline and the Road width.</summary>
+        public RacingLine RacingLine { get; private set; }
+
         /// <summary>The ordered Checkpoints of a Lap, derived from the Centreline.</summary>
         public CheckpointRoute Checkpoints { get; private set; }
 
@@ -54,12 +57,22 @@ namespace Unbounded.Track
         /// <summary>The position and heading of a car at a distance along the Track.</summary>
         public Pose SamplePose(float distance)
         {
+            return SamplePose(distance, 0f);
+        }
+
+        /// <summary>
+        /// The pose of a car at a distance along the Track and a lateral offset,
+        /// which is how the Grid is laid out either side of the Centreline.
+        /// </summary>
+        public Pose SamplePose(float distance, float lateralOffset)
+        {
             if (Path == null)
             {
                 throw new InvalidOperationException("The Track has not been built yet.");
             }
 
-            Vector3 position = transform.TransformPoint(Path.SamplePosition(distance));
+            Vector3 local = Path.SamplePosition(distance) + Path.SampleRight(distance) * lateralOffset;
+            Vector3 position = transform.TransformPoint(local);
             Vector3 direction = transform.TransformDirection(Path.SampleDirection(distance));
             return new Pose(position, Quaternion.LookRotation(direction, Vector3.up));
         }
@@ -96,11 +109,13 @@ namespace Unbounded.Track
                 if (_controlPoints == null || _controlPoints.Length < 3)
                 {
                     Path = null;
+                    RacingLine = null;
                     Checkpoints = null;
                     return;
                 }
 
                 Path = TrackPath.FromControlPoints(_controlPoints);
+                RacingLine = Unbounded.Track.RacingLine.FromCentreline(Path, _shape);
                 Checkpoints = new CheckpointRoute(Path.Length, Mathf.Max(1, _checkpointCount));
 
                 var generated = new GameObject("Generated") { hideFlags = HideFlags.DontSave };

@@ -9,9 +9,9 @@ one track, one car, and five AI opponents over three laps.
 Milestone 1 in progress. The handling model, its Rigidbody adapter, gamepad and
 keyboard input, a generated closed circuit with Kerbs and Barriers, validated
 Laps with ordered Checkpoints and reset, a HUD with the lap counter and
-wrong-way warning, a chase camera, and the solo Race loop — Countdown, race
-timer, pause, three-Lap finish, and restart without a scene reload — are in
-place.
+wrong-way warning, a chase camera, the Race loop — Countdown, race timer, pause,
+three-Lap finish, and restart without a scene reload — and a field of five AI
+opponents racing the derived Racing line are in place.
 
 ## Requirements
 

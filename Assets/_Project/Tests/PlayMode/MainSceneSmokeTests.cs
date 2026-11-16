@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Unbounded.AI;
 using Unbounded.App;
 using Unbounded.Race;
 using Unbounded.Track;
@@ -21,11 +22,30 @@ namespace Unbounded.Tests.PlayMode
     /// </summary>
     public sealed class MainSceneSmokeTests
     {
-        private static IEnumerator LoadMainScene()
+        private static IEnumerator LoadMainScene(bool keepOpponents = false)
         {
             SceneManager.LoadScene("Main");
             yield return null;
             yield return null;
+
+            if (!keepOpponents)
+            {
+                ClearTheField();
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Removes the AI field so a test can drive the player car alone. The
+        /// opponents race the same scene, so leaving them in would put their
+        /// cars in the player's way and make "the" car ambiguous.
+        /// </summary>
+        private static void ClearTheField()
+        {
+            foreach (AiDriver driver in Object.FindObjectsByType<AiDriver>())
+            {
+                Object.Destroy(driver.gameObject);
+            }
         }
 
         private static void DisablePlayerInput()
@@ -199,6 +219,86 @@ namespace Unbounded.Tests.PlayMode
                 "The car should face along the Track at the start line.");
             Assert.That(track.SurfaceAt(car.transform.position), Is.EqualTo(TrackSurface.Road),
                 "The car should spawn on the road, not on the grass.");
+        }
+
+        [UnityTest]
+        public IEnumerator TheFieldStartsOnTheGridAndRacesTheCircuit()
+        {
+            yield return LoadMainScene(keepOpponents: true);
+
+            TrackRoot track = FindTrack();
+            RaceController race = Object.FindAnyObjectByType<RaceController>();
+            LapProgressTracker player = Object.FindAnyObjectByType<LapProgressTracker>();
+            AiDriver[] field = Object.FindObjectsByType<AiDriver>();
+
+            Assert.That(race, Is.Not.Null);
+            Assert.That(player, Is.Not.Null);
+            Assert.That(field.Length, Is.EqualTo(RaceGrid.OpponentCount),
+                "Five opponents must line up against the player.");
+
+            // The Grid is on the Road, the player starts behind the field, and
+            // nobody is close enough to spawn on top of anybody else.
+            var starts = new List<Vector3> { player.transform.position };
+            foreach (AiDriver opponent in field)
+            {
+                Vector3 position = opponent.transform.position;
+                TrackProjection projection = track.Project(position);
+
+                Assert.That(track.SurfaceAt(position), Is.EqualTo(TrackSurface.Road),
+                    "Every opponent must start on the Road.");
+                Assert.That(Mathf.Abs(projection.LateralOffset), Is.LessThan(track.Shape.HalfWidth - 1f),
+                    "Every opponent must start within the Road.");
+                Assert.That(opponent.Progress, Is.GreaterThan(player.Progress),
+                    "The player starts behind the field.");
+                starts.Add(position);
+            }
+
+            for (int a = 0; a < starts.Count; a++)
+            {
+                for (int b = a + 1; b < starts.Count; b++)
+                {
+                    Vector3 apart = starts[a] - starts[b];
+                    apart.y = 0f;
+                    Assert.That(apart.magnitude, Is.GreaterThan(4f),
+                        "Two cars spawned on top of each other on the Grid.");
+                }
+            }
+
+            float deadline = Time.unscaledTime + 8f;
+            while (race.Race.Phase == RacePhase.Countdown && Time.unscaledTime < deadline)
+            {
+                yield return null;
+            }
+
+            Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Racing),
+                "The Countdown must release the field on its own.");
+
+            float furthest = 0f;
+            for (int step = 0; step < 300; step++)
+            {
+                yield return new WaitForFixedUpdate();
+                foreach (AiDriver opponent in field)
+                {
+                    furthest = Mathf.Max(furthest,
+                        Mathf.Abs(track.Project(opponent.transform.position).LateralOffset));
+                }
+            }
+
+            for (int i = 0; i < field.Length; i++)
+            {
+                AiDriver opponent = field[i];
+                Rigidbody body = opponent.GetComponent<Rigidbody>();
+
+                Assert.That(Vector3.Distance(starts[i + 1], opponent.transform.position), Is.GreaterThan(60f),
+                    "An opponent barely moved off the Grid.");
+                Assert.That(body.linearVelocity.magnitude, Is.GreaterThan(5f),
+                    "An opponent stalled on the Track.");
+                Assert.That(opponent.ControlsEnabled, Is.True,
+                    "An opponent lost its controls while racing.");
+            }
+
+            Assert.That(furthest, Is.LessThan(track.Shape.EdgeOffset),
+                $"An opponent left the Road and the Kerb (reached {furthest:0.0}m from the Centreline).");
         }
 
         [UnityTest]
