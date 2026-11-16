@@ -51,6 +51,12 @@ namespace Unbounded.App
         /// <summary>Validated Laps completed this Race.</summary>
         public int LapsCompleted => _counter?.Lap ?? 0;
 
+        /// <summary>Checkpoints taken in order on the current Lap.</summary>
+        public int CheckpointsPassed => _counter?.CheckpointsPassed ?? 0;
+
+        /// <summary>Metres along the current Lap at the last physics step.</summary>
+        public float TrackDistance { get; private set; }
+
         /// <summary>
         /// Metres the car has covered along the Track this Race, counting
         /// completed Laps. It never goes backwards, so a car that crosses the
@@ -70,6 +76,7 @@ namespace Unbounded.App
 
             BuildCounter();
             Progress = StartDistance;
+            TrackDistance = StartDistance;
         }
 
         private void FixedUpdate()
@@ -81,6 +88,7 @@ namespace Unbounded.App
             }
 
             float distance = _track.Project(_body.position).Distance;
+            TrackDistance = distance;
             LapUpdate update = _counter.Advance(distance);
             if (update.LapCompleted)
             {
@@ -123,6 +131,7 @@ namespace Unbounded.App
             _counter = new LapCounter(_track.Checkpoints);
             _wrongWay.Reset();
             Progress = StartDistance;
+            TrackDistance = StartDistance;
             PlaceOnTrack(StartDistance);
         }
 

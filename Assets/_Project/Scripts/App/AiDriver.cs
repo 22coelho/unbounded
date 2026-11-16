@@ -23,6 +23,7 @@ namespace Unbounded.App
         [SerializeField] private float _gridLateral;
 
         private RacingLineFollower _driver;
+        private LapCounter _lapCounter;
         private float _progress;
         private float _lastTrackDistance;
         private bool _gridPending;
@@ -32,6 +33,15 @@ namespace Unbounded.App
 
         /// <summary>Metres covered along the Track this Race, signed from the start/finish line.</summary>
         public float Progress => _progress;
+
+        /// <summary>Validated Laps completed this Race.</summary>
+        public int LapsCompleted => _lapCounter?.Lap ?? 0;
+
+        /// <summary>Checkpoints taken in order on the current Lap.</summary>
+        public int CheckpointsPassed => _lapCounter?.CheckpointsPassed ?? 0;
+
+        /// <summary>Metres along the current Lap at the last physics step.</summary>
+        public float TrackDistance => _lastTrackDistance;
 
         /// <summary>Wires the driver when the scene is built from the editor.</summary>
         public void Configure(
@@ -127,6 +137,13 @@ namespace Unbounded.App
             TrackProjection projection = _track.Project(_body.position);
             TrackProgress(projection.Distance);
 
+            if (_lapCounter == null && _track.Checkpoints != null)
+            {
+                _lapCounter = new LapCounter(_track.Checkpoints);
+            }
+
+            _lapCounter?.Advance(projection.Distance);
+
             Vector3 localVelocity = transform.InverseTransformDirection(_body.linearVelocity);
             AiControls controls = _driver.Step(
                 new AiSituation
@@ -170,14 +187,25 @@ namespace Unbounded.App
         {
             _progress = 0f;
             _lastTrackDistance = 0f;
+            _lapCounter = null;
 
             if (_track == null || _track.Path == null)
             {
+                // The Grid slot is authored data, so the car has a place in the
+                // Standings before the Track finishes building. The first
+                // physics step wraps it once the path exists.
+                _lastTrackDistance = _gridDistance;
+                _progress = _gridDistance;
                 _gridPending = true;
                 return;
             }
 
             _gridPending = false;
+            if (_track.Checkpoints != null)
+            {
+                _lapCounter = new LapCounter(_track.Checkpoints);
+            }
+
             float length = _track.Path.Length;
             _lastTrackDistance = _track.Path.WrapDistance(_gridDistance);
             _progress = _lastTrackDistance > length * 0.5f ? _lastTrackDistance - length : _lastTrackDistance;

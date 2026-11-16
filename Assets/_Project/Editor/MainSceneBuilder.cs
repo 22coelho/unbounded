@@ -380,6 +380,15 @@ namespace Unbounded.Editor
             lapRect.sizeDelta = new Vector2(420f, 64f);
             lap.text = "LAP 1/3";
 
+            Text position = CreateText(hudObject.transform, "Position", font, 30, TextAnchor.MiddleLeft);
+            RectTransform positionRect = position.rectTransform;
+            positionRect.anchorMin = new Vector2(0f, 1f);
+            positionRect.anchorMax = new Vector2(0f, 1f);
+            positionRect.pivot = new Vector2(0f, 1f);
+            positionRect.anchoredPosition = new Vector2(36f, -92f);
+            positionRect.sizeDelta = new Vector2(420f, 56f);
+            position.text = "POS 6/6";
+
             Text timer = CreateText(hudObject.transform, "Race Timer", font, 34, TextAnchor.MiddleRight);
             RectTransform timerRect = timer.rectTransform;
             timerRect.anchorMin = new Vector2(1f, 1f);
@@ -422,7 +431,7 @@ namespace Unbounded.Editor
             pauseSummary.text = "ESC / START TO RESUME\nQ / SELECT TO QUIT";
 
             var hud = hudObject.AddComponent<RaceHud>();
-            hud.Configure(lap, wrongWay);
+            hud.Configure(lap, position, wrongWay);
             hud.ConfigureRace(countdown, timer, finishScreen, finishSummary, pauseScreen);
             hud.Bind(lapProgress);
             return hud;
@@ -470,7 +479,7 @@ namespace Unbounded.Editor
             bodyRect.anchorMax = new Vector2(0.5f, 0.5f);
             bodyRect.pivot = new Vector2(0.5f, 1f);
             bodyRect.anchoredPosition = new Vector2(0f, -10f);
-            bodyRect.sizeDelta = new Vector2(1400f, 260f);
+            bodyRect.sizeDelta = new Vector2(1400f, 520f);
 
             panel.SetActive(false);
             return panel;

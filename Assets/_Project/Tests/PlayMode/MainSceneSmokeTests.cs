@@ -808,18 +808,26 @@ namespace Unbounded.Tests.PlayMode
         [UnityTest]
         public IEnumerator HudShowsTheLapAndWarnsWhenTheCarTurnsAround()
         {
-            yield return LoadMainScene();
+            yield return LoadMainScene(keepOpponents: true);
 
             RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
             Assert.That(hud, Is.Not.Null, "The Main scene must contain the HUD.");
 
             Text lapText = hud.transform.Find("Lap Counter").GetComponent<Text>();
+            Text positionText = hud.transform.Find("Position").GetComponent<Text>();
             Text wrongWayText = hud.transform.Find("Wrong Way").GetComponent<Text>();
             Assert.That(lapText, Is.Not.Null);
+            Assert.That(positionText, Is.Not.Null);
             Assert.That(wrongWayText, Is.Not.Null);
 
             Assert.That(lapText.text, Is.EqualTo("LAP 1/3"),
                 "The HUD must show the Lap being driven and the total from the start.");
+            Assert.That(positionText.text, Is.EqualTo("POS 6/6"),
+                "The player starts at the back of a six-car Grid, and the HUD must say so.");
+
+            // The rest of this test drives the player alone.
+            ClearTheField();
+            yield return null;
             Assert.That(wrongWayText.gameObject.activeSelf, Is.False,
                 "No wrong-way warning before the car has moved.");
 
@@ -1014,7 +1022,7 @@ namespace Unbounded.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheFinishScreenAppearsAfterTheFinalLap()
         {
-            yield return LoadMainScene();
+            yield return LoadMainScene(keepOpponents: true);
 
             RaceController race = Object.FindAnyObjectByType<RaceController>();
             RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
@@ -1046,6 +1054,17 @@ namespace Unbounded.Tests.PlayMode
             Assert.That(race.Race.Phase, Is.EqualTo(RacePhase.Finished));
             Assert.That(finishScreen.activeSelf, Is.True, "The finish screen must appear once the Race ends.");
             Assert.That(summary.text, Does.Contain("TIME"), "The finish screen must show the Race time.");
+
+            for (int place = 1; place <= RaceGrid.OpponentCount; place++)
+            {
+                Assert.That(summary.text, Does.Contain("OPPONENT " + place),
+                    "The finish screen must list every car in the field.");
+            }
+
+            Assert.That(summary.text, Does.Contain("YOU"), "The finish screen must list the player.");
+            Assert.That(summary.text.IndexOf("OPPONENT " + RaceGrid.OpponentCount),
+                Is.LessThan(summary.text.IndexOf("YOU")),
+                "The finish screen must list the field in order; from the back of the Grid the player is last.");
 
             string stopped = hud.transform.Find("Race Timer").GetComponent<Text>().text;
             yield return new WaitForSecondsRealtime(0.4f);

@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using Unbounded.Race;
 using Unbounded.UI;
@@ -27,6 +28,10 @@ namespace Unbounded.App
         private RacePhase _lastPhase;
         private bool _paused;
         private float _goRemaining;
+        private RacerProgress[] _field;
+        private string[] _racerNames;
+        private string[] _finishOrder;
+        private int _playerPosition = 1;
 
         /// <summary>The Race being run.</summary>
         public RaceState Race => _race;
@@ -61,6 +66,7 @@ namespace Unbounded.App
             _paused = false;
             _goRemaining = 0f;
             _lastPhase = _race.Phase;
+            _finishOrder = null;
             Time.timeScale = 1f;
 
             _lapProgress?.RestartLap();
@@ -224,8 +230,70 @@ namespace Unbounded.App
             _lastPhase = _race.Phase;
             _paused = false;
             _goRemaining = 0f;
+            _finishOrder = null;
 
+            BuildRacerField();
             ApplyControls(_race.Phase == RacePhase.Racing);
+        }
+
+        private void BuildRacerField()
+        {
+            int opponents = _opponents?.Length ?? 0;
+            _field = new RacerProgress[opponents + 1];
+            _racerNames = new string[opponents + 1];
+            _racerNames[0] = "You";
+
+            for (int i = 0; i < opponents; i++)
+            {
+                AiDriver opponent = _opponents[i];
+                _racerNames[i + 1] = opponent != null ? opponent.name : "Opponent " + (i + 1);
+            }
+
+            _playerPosition = 1;
+        }
+
+        /// <summary>
+        /// Reads every car's live progress into the field and works out the
+        /// player's place. Read every frame, so a place changes as cars pass
+        /// each other rather than only when a Checkpoint is crossed.
+        /// </summary>
+        private void RefreshStandings()
+        {
+            if (_field == null || _lapProgress == null || _race == null)
+            {
+                return;
+            }
+
+            _field[0] = new RacerProgress(
+                Mathf.Min(_lapProgress.LapsCompleted, _race.TotalLaps),
+                _lapProgress.CheckpointsPassed,
+                _lapProgress.TrackDistance);
+
+            int opponents = Mathf.Min(_opponents?.Length ?? 0, _field.Length - 1);
+            for (int i = 0; i < opponents; i++)
+            {
+                AiDriver opponent = _opponents[i];
+                _field[i + 1] = opponent == null
+                    ? default
+                    : new RacerProgress(
+                        Mathf.Min(opponent.LapsCompleted, _race.TotalLaps),
+                        opponent.CheckpointsPassed,
+                        opponent.TrackDistance);
+            }
+
+            _playerPosition = Standings.PositionOf(_field, 0);
+        }
+
+        private string[] BuildFinishOrder()
+        {
+            int[] order = Standings.Order(_field);
+            var names = new string[order.Length];
+            for (int i = 0; i < order.Length; i++)
+            {
+                names[i] = _racerNames[order[i]];
+            }
+
+            return names;
         }
 
         private void ApplyControls(bool enabled)
@@ -289,9 +357,17 @@ namespace Unbounded.App
             _hud.SetRaceTime(_race.RaceTime);
             _hud.SetPaused(_paused);
 
+            RefreshStandings();
+            _hud.SetPosition(_playerPosition, _field.Length);
+
             if (_race.Phase == RacePhase.Finished)
             {
-                _hud.ShowFinish(_race.RaceTime, _race.BestLapTime, _race.HasLapTimes);
+                if (_finishOrder == null)
+                {
+                    _finishOrder = BuildFinishOrder();
+                }
+
+                _hud.ShowFinish(_race.RaceTime, _race.BestLapTime, _race.HasLapTimes, _finishOrder);
             }
             else
             {

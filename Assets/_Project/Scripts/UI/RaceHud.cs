@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using Unbounded.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,6 +16,7 @@ namespace Unbounded.UI
     public sealed class RaceHud : MonoBehaviour
     {
         [SerializeField] private Text _lapText;
+        [SerializeField] private Text _positionText;
         [SerializeField] private Text _wrongWayText;
         [SerializeField] private Text _countdownText;
         [SerializeField] private Text _timerText;
@@ -25,15 +28,18 @@ namespace Unbounded.UI
         private IRaceReadout _readout;
         private int _shownLap = -1;
         private int _shownTotal = -1;
+        private int _shownPosition = -1;
+        private int _shownField = -1;
         private int _shownWrongWay = -1;
         private int _shownTime = -1;
         private string _shownCountdown;
         private bool _finishShown;
 
         /// <summary>Wires the permanent HUD labels when the scene is built from the editor.</summary>
-        public void Configure(Text lapText, Text wrongWayText)
+        public void Configure(Text lapText, Text positionText, Text wrongWayText)
         {
             _lapText = lapText;
+            _positionText = positionText;
             _wrongWayText = wrongWayText;
             Refresh();
         }
@@ -122,8 +128,30 @@ namespace Unbounded.UI
             _timerText.text = FormatTime(hundredths / 100f);
         }
 
-        /// <summary>Shows the finish screen with the total time and the best Lap.</summary>
-        public void ShowFinish(float totalTime, float bestLapTime, bool hasBestLap)
+        /// <summary>Shows the player's place out of the field, counting from one.</summary>
+        public void SetPosition(int position, int field)
+        {
+            if (_positionText == null)
+            {
+                return;
+            }
+
+            if (position == _shownPosition && field == _shownField)
+            {
+                return;
+            }
+
+            _shownPosition = position;
+            _shownField = field;
+            _positionText.text = "POS " + position + "/" + field;
+        }
+
+        /// <summary>
+        /// Shows the finish screen with the total time, the best Lap, and every
+        /// car in final order. The standings are ordered by the Race flow.
+        /// </summary>
+        public void ShowFinish(float totalTime, float bestLapTime, bool hasBestLap,
+            IReadOnlyList<string> standings)
         {
             if (_finishScreen == null || _finishSummaryText == null || _finishShown)
             {
@@ -133,8 +161,28 @@ namespace Unbounded.UI
             _finishShown = true;
             _finishScreen.SetActive(true);
 
-            string best = hasBestLap ? "\nBEST LAP   " + FormatTime(bestLapTime) : string.Empty;
-            _finishSummaryText.text = "TIME   " + FormatTime(totalTime) + best + "\n\nPRESS R / Y TO RESTART";
+            var summary = new StringBuilder();
+            summary.Append("TIME   ").Append(FormatTime(totalTime));
+            if (hasBestLap)
+            {
+                summary.Append("\nBEST LAP   ").Append(FormatTime(bestLapTime));
+            }
+
+            summary.Append("\n\n");
+            if (standings != null)
+            {
+                for (int i = 0; i < standings.Count; i++)
+                {
+                    summary.Append(i + 1).Append("   ").Append(standings[i].ToUpperInvariant());
+                    if (i < standings.Count - 1)
+                    {
+                        summary.Append('\n');
+                    }
+                }
+            }
+
+            summary.Append("\n\nPRESS R / Y TO RESTART");
+            _finishSummaryText.text = summary.ToString();
         }
 
         public void HideFinish()
