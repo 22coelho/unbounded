@@ -15,7 +15,11 @@ scene reload — a field of five AI opponents racing the derived Racing line, an
 Nitro with a draining, recharging HUD meter and the same lockout for player and
 AI are in place. Every car is audible: engine pitch follows speed and throttle,
 tyre screech follows lateral slip, and collisions play an impact scaled by
-closing speed, with 3D attenuation and a distance filter on the field.
+closing speed, with 3D attenuation and a distance filter on the field. The
+circuit is dressed from the free Kenney Racing and Nature kits — liveried cars,
+a start gantry, grandstands, pits, signage, pylons, and a seeded treeline — all
+mapped onto one palette under a golden-hour sky, with bloom, camera motion blur,
+and a colour grade. The scene runs well above 60fps on the development machine.
 
 ## Requirements
 

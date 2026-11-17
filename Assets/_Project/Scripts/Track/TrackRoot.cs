@@ -18,6 +18,7 @@ namespace Unbounded.Track
         [SerializeField] private Material _kerbMaterial;
         [SerializeField] private Material _barrierMaterial;
         [SerializeField] private Material _startLineMaterial;
+        [SerializeField] private Material _edgeLineMaterial;
         [SerializeField] private PhysicsMaterial _surfacePhysicsMaterial;
         [SerializeField] private int _checkpointCount = CheckpointRoute.DefaultCount;
 
@@ -42,7 +43,8 @@ namespace Unbounded.Track
             Material kerbMaterial,
             Material barrierMaterial,
             Material startLineMaterial,
-            PhysicsMaterial surfacePhysicsMaterial)
+            PhysicsMaterial surfacePhysicsMaterial,
+            Material edgeLineMaterial = null)
         {
             _controlPoints = controlPoints;
             _shape = shape;
@@ -51,6 +53,7 @@ namespace Unbounded.Track
             _barrierMaterial = barrierMaterial;
             _startLineMaterial = startLineMaterial;
             _surfacePhysicsMaterial = surfacePhysicsMaterial;
+            _edgeLineMaterial = edgeLineMaterial;
             Rebuild();
         }
 
@@ -125,6 +128,11 @@ namespace Unbounded.Track
                 AddMesh("Road", TrackMeshBuilder.BuildRoad(Path, _shape), _roadMaterial, true);
                 AddMesh("Kerbs", TrackMeshBuilder.BuildKerbs(Path, _shape), _kerbMaterial, true);
                 AddMesh("Barriers", TrackMeshBuilder.BuildBarriers(Path, _shape), _barrierMaterial, true);
+                if (_edgeLineMaterial != null)
+                {
+                    AddMesh("Edge Lines", TrackMeshBuilder.BuildEdgeLines(Path, _shape), _edgeLineMaterial, false);
+                }
+
                 AddMesh("Start Line", TrackMeshBuilder.BuildStartLine(Path, _shape), _startLineMaterial, false);
             }
             finally

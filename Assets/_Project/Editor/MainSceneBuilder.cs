@@ -9,13 +9,18 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace Unbounded.Editor
 {
     /// <summary>
-    /// Builds the main scene: the generated circuit, one drivable car on the
-    /// start line, and a chase camera that keeps the barriers out of the lens.
+    /// Builds the main scene: the generated circuit dressed with the free
+    /// Racing and Nature kits, one drivable car on the start line, and a chase
+    /// camera that keeps the barriers out of the lens. Every material, the sky,
+    /// and the post-processing stack come from <see cref="ArtPalette"/>, so the
+    /// look is one deliberate choice rather than a pile of asset defaults.
     /// Run from the menu or in batch mode:
     /// Unity -batchmode -quit -projectPath . -executeMethod Unbounded.Editor.MainSceneBuilder.Build
     /// </summary>
@@ -23,12 +28,14 @@ namespace Unbounded.Editor
     {
         private const string MainScenePath = "Assets/_Project/Scenes/Main.unity";
         private const string DrivingActionsPath = "Assets/_Project/Input/Driving.inputactions";
-        private const string MaterialsFolder = "Assets/_Project/Art/Materials";
-        private const string TexturesFolder = "Assets/_Project/Art/Textures";
         private const string PhysicsFolder = "Assets/_Project/Art/Physics";
+        private const string MeshFolder = "Assets/_Project/Art/Meshes";
 
-        private const float GroundSize = 600f;
+        private const float GroundSize = 700f;
         private static readonly Vector3 GroundCentre = new Vector3(-125f, 0f, 25f);
+
+        /// <summary>The car's painted body is this long, against a 4 m collider.</summary>
+        private const float CarVisualLength = 3.55f;
 
         [MenuItem("Unbounded/Build Main Scene")]
         public static void Build()
@@ -39,79 +46,33 @@ namespace Unbounded.Editor
                 throw new IOException("Missing input actions at " + DrivingActionsPath);
             }
 
-            EnsureFolder(MaterialsFolder);
-            EnsureFolder(TexturesFolder);
-            EnsureFolder(PhysicsFolder);
+            ArtPalette.EnsureFolders();
+            ArtPalette.EnsureFolder(PhysicsFolder);
+            ArtPalette.EnsureFolder(MeshFolder);
+            KitAssets.PrepareImports();
 
-            Material grassMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "Grass.mat"),
-                new Color(0.24f, 0.36f, 0.18f),
-                0.02f,
-                CreateNoiseTexture(Path.Combine(TexturesFolder, "Grass.png"), new Color(0.16f, 0.27f, 0.12f),
-                    new Color(0.31f, 0.43f, 0.21f), 7f),
-                new Vector2(GroundSize * 0.1f, GroundSize * 0.1f));
-            Material asphaltMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "Asphalt.mat"),
-                new Color(0.21f, 0.21f, 0.22f),
-                0.12f,
-                CreateNoiseTexture(Path.Combine(TexturesFolder, "Asphalt.png"), new Color(0.14f, 0.14f, 0.15f),
-                    new Color(0.26f, 0.26f, 0.27f), 24f),
-                Vector2.one);
-            Material kerbMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "Kerb.mat"),
-                Color.white,
-                0.18f,
-                CreateStripeTexture(Path.Combine(TexturesFolder, "Kerb.png"),
-                    new Color(0.82f, 0.13f, 0.11f), new Color(0.92f, 0.92f, 0.89f), 8),
-                Vector2.one);
-            Material barrierMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "Barrier.mat"),
-                new Color(0.82f, 0.82f, 0.80f),
-                0.22f,
-                CreateStripeTexture(Path.Combine(TexturesFolder, "Barrier.png"),
-                    new Color(0.66f, 0.10f, 0.09f), new Color(0.86f, 0.86f, 0.83f), 4),
-                Vector2.one);
-            Material startLineMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "StartLine.mat"),
-                new Color(0.9f, 0.9f, 0.85f),
-                0.2f,
-                null,
-                Vector2.one);
-            Material bodyMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "CarBody.mat"),
-                new Color(0.72f, 0.08f, 0.07f),
-                0.55f,
-                null,
-                Vector2.one);
-            Material wheelMaterial = CreateMaterial(
-                Path.Combine(MaterialsFolder, "CarWheel.mat"),
-                new Color(0.035f, 0.035f, 0.04f),
-                0.15f,
-                null,
-                Vector2.one);
-            Material nitroMaterial = CreateEmissiveMaterial(
-                Path.Combine(MaterialsFolder, "NitroFlame.mat"),
-                new Color(1f, 0.48f, 0.08f),
-                5f);
+            Materials materials = CreateMaterials();
+            KitPalette palette = CreateKitPalette(materials);
 
             PhysicsMaterial frictionless = CreateFrictionlessMaterial(
                 Path.Combine(PhysicsFolder, "Frictionless.physicMaterial"));
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            CreateCameraAndLight();
-            CreateGround(grassMaterial, frictionless);
+            CreateLighting();
+            CreateGround(materials.Grass, frictionless);
             TrackRoot track = CreateTrack(
-                asphaltMaterial,
-                kerbMaterial,
-                barrierMaterial,
-                startLineMaterial,
+                materials.Asphalt,
+                materials.Kerb,
+                materials.Barrier,
+                materials.StartLine,
+                materials.EdgeLine,
                 frictionless);
+            CreateEnvironment(track, palette);
+
             GameObject car = CreatePlayerCar(
-                bodyMaterial,
-                wheelMaterial,
-                startLineMaterial,
-                nitroMaterial,
+                materials,
+                palette,
                 actions,
                 frictionless,
                 track);
@@ -121,10 +82,8 @@ namespace Unbounded.Editor
             var input = car.GetComponent<PlayerInputReader>();
             RaceHud hud = CreateHud(lapProgress, car.GetComponent<CarController>());
             AiDriver[] opponents = CreateOpponents(
-                bodyMaterial,
-                wheelMaterial,
-                startLineMaterial,
-                nitroMaterial,
+                materials,
+                palette,
                 frictionless,
                 track,
                 lapProgress);
@@ -141,40 +100,184 @@ namespace Unbounded.Editor
 
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScenePath, true) };
             AssetDatabase.SaveAssets();
-            Debug.Log("Built the main scene with a " + track.Path.Length.ToString("0") + " metre circuit.");
+            Debug.Log("Built the main scene with a " + track.Path.Length.ToString("0") +
+                      " metre circuit under a golden-hour sky.");
         }
 
-        private static void CreateCameraAndLight()
+        private sealed class Materials
         {
-            var cameraObject = new GameObject("Main Camera");
-            cameraObject.tag = "MainCamera";
-            cameraObject.transform.position = new Vector3(0f, 2.6f, -7.5f);
-            cameraObject.transform.rotation = Quaternion.Euler(8f, 0f, 0f);
-            cameraObject.AddComponent<Camera>();
-            cameraObject.AddComponent<AudioListener>();
-            CinemachineBrain brain = cameraObject.AddComponent<CinemachineBrain>();
-
-            // The car is a Rigidbody, so sample the camera on the physics clock:
-            // it keeps the rig glued to the car no matter the render rate.
-            brain.UpdateMethod = CinemachineBrain.UpdateMethods.FixedUpdate;
-
-            var lightObject = new GameObject("Directional Light");
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            var light = lightObject.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.intensity = 1.1f;
-            light.color = new Color(1f, 0.96f, 0.88f);
-            light.shadows = LightShadows.Soft;
+            public Material Asphalt;
+            public Material Kerb;
+            public Material Barrier;
+            public Material StartLine;
+            public Material EdgeLine;
+            public Material Grass;
+            public Material Tyre;
+            public Material Trim;
+            public Material Glass;
+            public Material Nitro;
+            public Material PlayerPaint;
+            public Material[] OpponentPaint;
         }
 
+        private static Materials CreateMaterials()
+        {
+            Texture2D asphaltNoise = ArtPalette.Noise(
+                "Asphalt", ArtPalette.Srgb(0x32, 0x38, 0x40), ArtPalette.Srgb(0x46, 0x4C, 0x55), 26f);
+            Texture2D grassNoise = ArtPalette.Noise(
+                "Grass", ArtPalette.Srgb(0x4C, 0x6B, 0x36), ArtPalette.Srgb(0x63, 0x84, 0x42), 14f);
+            Texture2D kerbStripes = ArtPalette.Stripes(
+                "Kerb", ArtPalette.Srgb(0xD9, 0x35, 0x28), ArtPalette.Srgb(0xF2, 0xEE, 0xE2), 8);
+            Texture2D barrierStripes = ArtPalette.Stripes(
+                "Barrier", ArtPalette.Srgb(0xC8, 0x33, 0x29), ArtPalette.Srgb(0xE8, 0xE3, 0xD6), 4);
+            Texture2D startLineCheckers = ArtPalette.Checkers("StartLine", 16, 2);
+
+            var materials = new Materials
+            {
+                Asphalt = ArtPalette.Lit("Asphalt", ArtPalette.Asphalt, 0.18f, map: asphaltNoise, tiling: Vector2.one),
+                Kerb = ArtPalette.Lit("Kerb", Color.white, 0.22f, map: kerbStripes),
+                Barrier = ArtPalette.Lit("Barrier", Color.white, 0.2f, map: barrierStripes),
+                StartLine = ArtPalette.Lit("StartLine", Color.white, 0.25f, map: startLineCheckers,
+                    tiling: new Vector2(1f / (TrackShape.Default.HalfWidth * 2f), 1f / 1.5f)),
+                EdgeLine = ArtPalette.Lit("EdgeLine", ArtPalette.EdgeWhite, 0.3f),
+                Grass = ArtPalette.Lit("Grass", ArtPalette.Grass, 0.06f, map: grassNoise,
+                    tiling: new Vector2(GroundSize / 12f, GroundSize / 12f)),
+                Tyre = ArtPalette.Lit("CarTyre", ArtPalette.Tyre, 0.12f),
+                Trim = ArtPalette.Lit("CarTrim", ArtPalette.KitWhite, 0.45f, 0.1f),
+                Glass = ArtPalette.Lit("CarGlass", ArtPalette.KitGlass, 0.9f, 0.35f),
+                Nitro = ArtPalette.Emissive("NitroFlame", ArtPalette.NitroFlame, 5f),
+                PlayerPaint = ArtPalette.Lit("CarPaintPlayer", ArtPalette.PlayerPaint, 0.72f, 0.2f),
+                OpponentPaint = new Material[ArtPalette.OpponentPaint.Length]
+            };
+
+            for (int i = 0; i < materials.OpponentPaint.Length; i++)
+            {
+                materials.OpponentPaint[i] = ArtPalette.Lit(
+                    "CarPaintOpponent" + (i + 1), ArtPalette.OpponentPaint[i], 0.72f, 0.2f);
+            }
+
+            return materials;
+        }
+
+        /// <summary>
+        /// Both kits name their materials, so one dictionary decides every flat
+        /// colour in the environment: props, trees, rocks, and signage.
+        /// </summary>
+        private static KitPalette CreateKitPalette(Materials materials)
+        {
+            Texture2D tankco = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                Path.Combine(KitAssets.RacingTextures, "tankco.png"));
+            Texture2D checkers = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                Path.Combine(KitAssets.RacingTextures, "checkers.png"));
+            Texture2D net = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                Path.Combine(KitAssets.RacingTextures, "net.png"));
+
+            var palette = new KitPalette();
+            palette.Add("grey", ArtPalette.Lit("KitWhite", ArtPalette.KitWhite, 0.35f));
+            palette.Add("_defaultMat", ArtPalette.Lit("KitWhite", ArtPalette.KitWhite, 0.35f));
+            palette.Add("red", ArtPalette.Lit("KitRed", ArtPalette.KitRed, 0.4f));
+            palette.Add("road", materials.Asphalt);
+            palette.Add("glass", materials.Glass);
+            palette.Add("carTire", materials.Tyre);
+            palette.Add("pylon", ArtPalette.Lit("KitOrange", ArtPalette.KitOrange, 0.4f));
+            palette.Add("tankco", ArtPalette.Lit("KitTankco", Color.white, 0.35f, map: tankco));
+            palette.Add("checkers", ArtPalette.Cutout("KitCheckers", Color.white, checkers));
+            palette.Add("net", ArtPalette.Cutout("KitNet", Color.white, net));
+            palette.Add("bark", ArtPalette.Lit("KitBark", ArtPalette.KitBark, 0.2f));
+            palette.Add("grass", ArtPalette.Lit("KitGrass", ArtPalette.Grass, 0.12f));
+            palette.Add("dirt", ArtPalette.Lit("KitDirt", ArtPalette.KitDirt, 0.15f));
+            palette.Add("woodBark", ArtPalette.Lit("TreeTrunk", ArtPalette.TreeTrunk, 0.12f));
+            palette.Add("woodBarkDark", ArtPalette.Lit("TreeTrunkDark", ArtPalette.TreeTrunkDark, 0.12f));
+            palette.Add("leafsGreen", ArtPalette.Lit("LeavesGreen", ArtPalette.LeavesGreen, 0.1f));
+            palette.Add("leafsDark", ArtPalette.Lit("LeavesDark", ArtPalette.LeavesDark, 0.1f));
+            return palette;
+        }
+
+        private static void CreateLighting()
+        {
+            var lightObject = new GameObject("Sun");
+            lightObject.transform.rotation = Quaternion.Euler(9f, -24f, 0f);
+            var sun = lightObject.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.color = ArtPalette.Sun;
+            sun.intensity = 2.4f;
+            sun.shadows = LightShadows.Soft;
+            sun.shadowStrength = 0.88f;
+            sun.shadowBias = 0.04f;
+            sun.shadowNormalBias = 0.35f;
+
+            // A cool fill from the opposite side keeps the shadowed flanks of
+            // the cars and the barriers from going black.
+            var fillObject = new GameObject("Fill Light");
+            fillObject.transform.rotation = Quaternion.Euler(34f, 156f, 0f);
+            var fill = fillObject.AddComponent<Light>();
+            fill.type = LightType.Directional;
+            fill.color = ArtPalette.Fill;
+            fill.intensity = 0.38f;
+            fill.shadows = LightShadows.None;
+
+            Vector3 sunDirection = -(lightObject.transform.rotation * Vector3.forward);
+            RenderSettings.skybox = ArtPalette.Sky(sunDirection);
+            RenderSettings.sun = sun;
+            RenderSettings.ambientMode = AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 1.3f;
+            RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
+            RenderSettings.reflectionIntensity = 1f;
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogDensity = 0.0032f;
+            RenderSettings.fogColor = ArtPalette.Fog;
+
+            var volumeObject = new GameObject("Post Processing");
+            Volume volume = volumeObject.AddComponent<Volume>();
+            volume.isGlobal = true;
+            volume.priority = 0f;
+            volume.sharedProfile = ArtPalette.PostProcessing();
+        }
+
+        /// <summary>
+        /// The grass the whole circuit sits on. It is a generated mesh, not a
+        /// primitive, so the ground can carry the palette's tiling and an exact
+        /// collider without a scale trick.
+        /// </summary>
         private static void CreateGround(Material material, PhysicsMaterial physicMaterial)
         {
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "Grass Field";
+            GameObject ground = new GameObject("Ground");
             ground.transform.position = GroundCentre;
-            ground.transform.localScale = new Vector3(GroundSize * 0.1f, 1f, GroundSize * 0.1f);
-            ground.GetComponent<MeshRenderer>().sharedMaterial = material;
-            ground.GetComponent<Collider>().sharedMaterial = physicMaterial;
+
+            Mesh mesh = CreateGroundMesh();
+            ground.AddComponent<MeshFilter>().sharedMesh = mesh;
+            ground.AddComponent<MeshRenderer>().sharedMaterial = material;
+
+            var collider = ground.AddComponent<MeshCollider>();
+            collider.sharedMesh = mesh;
+            collider.sharedMaterial = physicMaterial;
+
+            GameObjectUtility.SetStaticEditorFlags(ground,
+                StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic);
+        }
+
+        private static Mesh CreateGroundMesh()
+        {
+            float half = GroundSize * 0.5f;
+            var vertices = new[]
+            {
+                new Vector3(-half, 0f, -half),
+                new Vector3(-half, 0f, half),
+                new Vector3(half, 0f, half),
+                new Vector3(half, 0f, -half)
+            };
+            var normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+            var uvs = new[]
+            {
+                new Vector2(0f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(1f, 0f)
+            };
+            var triangles = new[] { 0, 1, 2, 0, 2, 3 };
+
+            return SaveMesh("Ground", vertices, normals, uvs, triangles);
         }
 
         private static TrackRoot CreateTrack(
@@ -182,6 +285,7 @@ namespace Unbounded.Editor
             Material kerbMaterial,
             Material barrierMaterial,
             Material startLineMaterial,
+            Material edgeLineMaterial,
             PhysicsMaterial physicMaterial)
         {
             var trackObject = new GameObject("Track");
@@ -195,7 +299,8 @@ namespace Unbounded.Editor
                 kerbMaterial,
                 barrierMaterial,
                 startLineMaterial,
-                physicMaterial);
+                physicMaterial,
+                edgeLineMaterial);
 
             if (track.Path == null)
             {
@@ -205,11 +310,206 @@ namespace Unbounded.Editor
             return track;
         }
 
+        /// <summary>
+        /// Dresses the circuit from the kits: a start gantry and flags, a
+        /// grandstand and pit lane along the opening straight, light posts
+        /// around the lap, signage at the corners, and the treeline beyond.
+        /// Everything sits outside the Barriers so the Race never drives
+        /// through scenery.
+        /// </summary>
+        private static void CreateEnvironment(TrackRoot track, KitPalette palette)
+        {
+            var furniture = new GameObject("Circuit").transform;
+            TrackShape shape = track.Shape;
+
+            // The gantry spans the opening straight just past the Grid, so the
+            // field launches under it instead of the chase camera starting
+            // inside its frame.
+            Pose gantry = track.SamplePose(26f);
+            KitAssets.Spawn(KitAssets.Racing, "overhead", palette, furniture, gantry.position, gantry.rotation,
+                new Vector3(1.65f, 1.05f, 1f));
+
+            foreach (int side in new[] { -1, 1 })
+            {
+                Pose flag = track.SamplePose(26f, side * (shape.BarrierOffset + 2.2f));
+                KitAssets.Spawn(KitAssets.Racing, "flagCheckers", palette, furniture, flag.position,
+                    flag.rotation * Quaternion.Euler(0f, side > 0 ? 90f : -90f, 0f), 0.72f);
+            }
+
+            // The pits and grandstands run down the right of the opening
+            // straight, outside the Barriers.
+            for (int i = 0; i < 5; i++)
+            {
+                Pose stand = track.SamplePose(40f + i * 12f, 19f);
+                KitAssets.Spawn(KitAssets.Racing, i % 2 == 0 ? "grandStand" : "grandStandCovered", palette,
+                    furniture, stand.position, stand.rotation * Quaternion.Euler(0f, 90f, 0f), 1.1f);
+            }
+
+            for (int i = 0; i < 7; i++)
+            {
+                Pose garage = track.SamplePose(16f + i * 11.5f, 28f);
+                KitAssets.Spawn(KitAssets.Racing, "pitsGarage", palette, furniture, garage.position,
+                    garage.rotation * Quaternion.Euler(0f, 90f, 0f), 1.05f);
+            }
+
+            Pose office = track.SamplePose(96f, 29f);
+            KitAssets.Spawn(KitAssets.Racing, "pitsOffice", palette, furniture, office.position,
+                office.rotation * Quaternion.Euler(0f, 90f, 0f), 1.05f);
+
+            for (int i = 0; i < 3; i++)
+            {
+                Pose tent = track.SamplePose(30f + i * 24f, 38f);
+                KitAssets.Spawn(KitAssets.Racing, "tentLong", palette, furniture, tent.position,
+                    tent.rotation * Quaternion.Euler(0f, 90f, 0f), 1f);
+            }
+
+            foreach (int side in new[] { -1, 1 })
+            {
+                Pose tower = track.SamplePose(118f, side * 17f);
+                KitAssets.Spawn(KitAssets.Racing, "bannerTowerRed", palette, furniture, tower.position,
+                    tower.rotation * Quaternion.Euler(0f, side > 0 ? 90f : -90f, 0f), 0.8f);
+            }
+
+            // Light posts march down both sides of the whole lap.
+            float step = 74f;
+            for (float distance = 20f; distance < track.Path.Length; distance += step)
+            {
+                foreach (int side in new[] { -1, 1 })
+                {
+                    Pose post = track.SamplePose(distance + (side > 0 ? 0f : step * 0.5f),
+                        side * (shape.BarrierOffset + 2.2f));
+                    KitAssets.Spawn(KitAssets.Racing, "lightPostModern", palette, furniture, post.position,
+                        post.rotation * Quaternion.Euler(0f, side > 0 ? 90f : -90f, 0f), 0.9f);
+                }
+            }
+
+            // Billboards face the approach to the three big corners.
+            float[] corners = { 205f, 470f, 745f };
+            for (int i = 0; i < corners.Length; i++)
+            {
+                int side = i % 2 == 0 ? 1 : -1;
+                Pose board = track.SamplePose(corners[i], side * (shape.EdgeOffset + 6f));
+                KitAssets.Spawn(KitAssets.Racing, "billboard", palette, furniture, board.position,
+                    board.rotation * Quaternion.Euler(0f, side > 0 ? -90f : 90f, 0f), 1f);
+            }
+
+            // A handful of pylons along the verge, where a marshal would drop
+            // them, so the edge of the Road has something human at ground level.
+            for (int i = 0; i < 14; i++)
+            {
+                float distance = 40f + i * 88f;
+                int side = i % 2 == 0 ? -1 : 1;
+                Pose cone = track.SamplePose(distance, side * (shape.EdgeOffset + 0.9f));
+                KitAssets.Spawn(KitAssets.Racing, "pylon", palette, furniture, cone.position,
+                    cone.rotation, 1.1f);
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                Pose fence = track.SamplePose(150f + i * 10f, shape.BarrierOffset + 1.4f);
+                KitAssets.Spawn(KitAssets.Racing, "fenceStraight", palette, furniture, fence.position,
+                    fence.rotation, 1f);
+            }
+
+            ScatterNature(track, furniture, palette);
+        }
+
+        /// <summary>
+        /// The treeline and the rocks. Placement is seeded, so the same
+        /// circuit comes back every build, and every sample is kept clear of the
+        /// Road, the verge, and the paddock.
+        /// </summary>
+        private static void ScatterNature(TrackRoot track, Transform parent, KitPalette palette)
+        {
+            var random = new System.Random(4177);
+            TrackShape shape = track.Shape;
+            float length = track.Path.Length;
+
+            string[] trees = { "tree_pineTallA", "tree_pineTallB", "tree_default", "tree_detailed", "tree_fat", "tree_cone" };
+            string[] rocks = { "rock_largeA", "rock_largeB", "rock_tallC", "rock_smallA", "rock_smallC" };
+
+            int planted = 0;
+            int attempts = 0;
+            while (planted < 190 && attempts < 4000)
+            {
+                attempts++;
+                float distance = (float)random.NextDouble() * length;
+                int side = random.Next(2) == 0 ? -1 : 1;
+                float lateral = side * (20f + (float)random.NextDouble() * 75f);
+
+                // Leave room for the paddock on the right of the opening straight.
+                if (side > 0 && distance < 150f && lateral < 46f)
+                {
+                    continue;
+                }
+
+                Pose pose = track.SamplePose(distance, lateral);
+                float scale = 4.2f + (float)random.NextDouble() * 4.2f;
+                Quaternion rotation = Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f);
+                string tree = trees[random.Next(trees.Length)];
+                KitAssets.Spawn(KitAssets.Nature, tree, palette, parent,
+                    new Vector3(pose.position.x, 0f, pose.position.z), rotation, scale);
+                planted++;
+            }
+
+            // A fuller belt far out, so the horizon reads as forest under the fog.
+            for (int i = 0; i < 80; i++)
+            {
+                float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+                float radius = 230f + (float)random.NextDouble() * 90f;
+                var point = new Vector3(
+                    GroundCentre.x + Mathf.Cos(angle) * radius,
+                    0f,
+                    GroundCentre.z + Mathf.Sin(angle) * radius);
+
+                if (Mathf.Abs(track.Project(point).LateralOffset) < 55f)
+                {
+                    continue;
+                }
+
+                float scale = 8f + (float)random.NextDouble() * 5f;
+                KitAssets.Spawn(KitAssets.Nature, trees[random.Next(trees.Length)], palette, parent, point,
+                    Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), scale);
+            }
+
+            for (int i = 0; i < 60; i++)
+            {
+                float distance = (float)random.NextDouble() * length;
+                int side = random.Next(2) == 0 ? -1 : 1;
+                float lateral = side * (14f + (float)random.NextDouble() * 26f);
+                if (side > 0 && distance < 150f && lateral < 46f)
+                {
+                    continue;
+                }
+
+                Pose pose = track.SamplePose(distance, lateral);
+                float scale = 3f + (float)random.NextDouble() * 5f;
+                KitAssets.Spawn(KitAssets.Nature, rocks[random.Next(rocks.Length)], palette, parent,
+                    new Vector3(pose.position.x, 0f, pose.position.z),
+                    Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), scale);
+            }
+
+            for (int i = 0; i < 50; i++)
+            {
+                float distance = (float)random.NextDouble() * length;
+                int side = random.Next(2) == 0 ? -1 : 1;
+                float lateral = side * (12.5f + (float)random.NextDouble() * 18f);
+                if (side > 0 && distance < 150f && lateral < 46f)
+                {
+                    continue;
+                }
+
+                Pose pose = track.SamplePose(distance, lateral);
+                KitAssets.Spawn(KitAssets.Nature,
+                    random.Next(2) == 0 ? "plant_bushLarge" : "plant_bushDetailed", palette, parent,
+                    new Vector3(pose.position.x, 0f, pose.position.z),
+                    Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), 3.5f);
+            }
+        }
+
         private static GameObject CreatePlayerCar(
-            Material bodyMaterial,
-            Material wheelMaterial,
-            Material accentMaterial,
-            Material nitroMaterial,
+            Materials materials,
+            KitPalette palette,
             InputActionAsset actions,
             PhysicsMaterial physicMaterial,
             TrackRoot track)
@@ -217,14 +517,13 @@ namespace Unbounded.Editor
             GameObject car = CreateCar(
                 "Player Car",
                 track.SamplePose(LapProgressTracker.StartDistance),
-                bodyMaterial,
-                wheelMaterial,
-                accentMaterial,
+                palette,
+                materials.PlayerPaint,
                 physicMaterial,
                 track,
                 out CarController controller);
             car.tag = "Player";
-            AddNitroEffect(car, nitroMaterial, isPlayer: true);
+            AddNitroEffect(car, materials.Nitro, isPlayer: true);
             AddCarAudio(car, isPlayer: true);
 
             var lapProgress = car.AddComponent<LapProgressTracker>();
@@ -239,14 +538,12 @@ namespace Unbounded.Editor
 
         /// <summary>
         /// Fills the Grid ahead of the player with opponents. Each has a small
-        /// pace offset, so the field spreads over a Race instead of forming one
-        /// train, but they all drive the same car.
+        /// pace offset and its own livery, so the field spreads over a Race
+        /// instead of forming one train, and stays readable in the mirror.
         /// </summary>
         private static AiDriver[] CreateOpponents(
-            Material bodyMaterial,
-            Material wheelMaterial,
-            Material accentMaterial,
-            Material nitroMaterial,
+            Materials materials,
+            KitPalette palette,
             PhysicsMaterial physicMaterial,
             TrackRoot track,
             LapProgressTracker player)
@@ -261,14 +558,13 @@ namespace Unbounded.Editor
                 GameObject car = CreateCar(
                     "Opponent " + (slot + 1),
                     track.SamplePose(distance, lateral),
-                    bodyMaterial,
-                    wheelMaterial,
-                    accentMaterial,
+                    palette,
+                    materials.OpponentPaint[slot],
                     physicMaterial,
                     track,
                     out CarController controller);
 
-                AddNitroEffect(car, nitroMaterial, isPlayer: false);
+                AddNitroEffect(car, materials.Nitro, isPlayer: false);
                 AddCarAudio(car, isPlayer: false);
 
                 AiConfig config = AiConfig.Default;
@@ -287,9 +583,8 @@ namespace Unbounded.Editor
         private static GameObject CreateCar(
             string name,
             Pose spawn,
-            Material bodyMaterial,
-            Material wheelMaterial,
-            Material accentMaterial,
+            KitPalette palette,
+            Material paint,
             PhysicsMaterial physicMaterial,
             TrackRoot track,
             out CarController controller)
@@ -318,24 +613,34 @@ namespace Unbounded.Editor
             var surface = car.AddComponent<CarSurfaceAdapter>();
             surface.Configure(track);
 
-            AddVisual(car.transform, PrimitiveType.Cube, "Body", new Vector3(0f, 0.5f, 0f),
-                new Vector3(1.8f, 1f, 4f), Quaternion.identity, bodyMaterial);
-            AddVisual(car.transform, PrimitiveType.Cube, "Cabin", new Vector3(0f, 1.15f, -0.15f),
-                new Vector3(1.3f, 0.5f, 1.8f), Quaternion.identity, bodyMaterial);
-            AddVisual(car.transform, PrimitiveType.Cube, "Front Marker", new Vector3(0f, 0.75f, 2.03f),
-                new Vector3(1.4f, 0.22f, 0.08f), Quaternion.identity, accentMaterial);
-
-            Quaternion wheelRotation = Quaternion.Euler(0f, 0f, 90f);
-            AddVisual(car.transform, PrimitiveType.Cylinder, "Wheel FL", new Vector3(-0.9f, 0.35f, 1.25f),
-                new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
-            AddVisual(car.transform, PrimitiveType.Cylinder, "Wheel FR", new Vector3(0.9f, 0.35f, 1.25f),
-                new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
-            AddVisual(car.transform, PrimitiveType.Cylinder, "Wheel RL", new Vector3(-0.9f, 0.35f, -1.25f),
-                new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
-            AddVisual(car.transform, PrimitiveType.Cylinder, "Wheel RR", new Vector3(0.9f, 0.35f, -1.25f),
-                new Vector3(0.7f, 0.125f, 0.7f), wheelRotation, wheelMaterial);
+            AddCarVisual(car, palette, paint);
 
             return car;
+        }
+
+        /// <summary>
+        /// The Kit's race car, scaled to the collider and laid on the Track.
+        /// The body material follows the car's livery; the Kit's trim, glass,
+        /// and tyres stay shared.
+        /// </summary>
+        private static void AddCarVisual(GameObject car, KitPalette palette, Material paint)
+        {
+            GameObject visual = KitAssets.Spawn(
+                KitAssets.Racing,
+                "raceCarRed",
+                palette,
+                car.transform,
+                Vector3.zero,
+                Quaternion.identity,
+                Vector3.one,
+                paint);
+
+            Bounds bounds = KitAssets.BoundsIn(visual, car.transform);
+            float scale = bounds.size.z > 0.001f ? CarVisualLength / bounds.size.z : 1f;
+            visual.transform.localScale = Vector3.one * scale;
+
+            Bounds scaled = KitAssets.BoundsIn(visual, car.transform);
+            visual.transform.localPosition -= new Vector3(scaled.center.x, scaled.min.y, scaled.center.z);
         }
 
         /// <summary>
@@ -345,17 +650,16 @@ namespace Unbounded.Editor
         /// </summary>
         private static void AddNitroEffect(GameObject car, Material flameMaterial, bool isPlayer)
         {
+            Mesh jet = CreateJetMesh();
             var flames = new GameObject("Nitro Flames");
             flames.transform.SetParent(car.transform, false);
-            AddVisual(flames.transform, PrimitiveType.Cube, "Flame L", new Vector3(-0.45f, 0.5f, -2.35f),
-                new Vector3(0.32f, 0.32f, 1.2f), Quaternion.identity, flameMaterial);
-            AddVisual(flames.transform, PrimitiveType.Cube, "Flame R", new Vector3(0.45f, 0.5f, -2.35f),
-                new Vector3(0.32f, 0.32f, 1.2f), Quaternion.identity, flameMaterial);
+            AddJet(flames.transform, "Flame L", new Vector3(-0.42f, 0.46f, -1.72f), jet, flameMaterial);
+            AddJet(flames.transform, "Flame R", new Vector3(0.42f, 0.46f, -1.72f), jet, flameMaterial);
             flames.SetActive(false);
 
             var glowObject = new GameObject("Nitro Glow");
             glowObject.transform.SetParent(car.transform, false);
-            glowObject.transform.localPosition = new Vector3(0f, 0.55f, -2.7f);
+            glowObject.transform.localPosition = new Vector3(0f, 0.55f, -2.2f);
             var glow = glowObject.AddComponent<Light>();
             glow.type = LightType.Point;
             glow.color = new Color(1f, 0.5f, 0.12f);
@@ -374,6 +678,89 @@ namespace Unbounded.Editor
 
             var effect = car.AddComponent<NitroBoostEffect>();
             effect.Configure(car.GetComponent<CarController>(), flames, glow, audio);
+        }
+
+        private static void AddJet(Transform parent, string name, Vector3 localPosition, Mesh mesh, Material material)
+        {
+            var jet = new GameObject(name);
+            jet.transform.SetParent(parent, false);
+            jet.transform.localPosition = localPosition;
+            jet.AddComponent<MeshFilter>().sharedMesh = mesh;
+            jet.AddComponent<MeshRenderer>().sharedMaterial = material;
+        }
+
+        /// <summary>A tapered jet that points down the car's -Z, built once and shared.</summary>
+        private static Mesh CreateJetMesh()
+        {
+            const int segments = 8;
+            const float radius = 0.17f;
+            const float length = 0.95f;
+
+            var vertices = new Vector3[segments + 2];
+            vertices[0] = Vector3.zero;
+            vertices[segments + 1] = new Vector3(0f, 0f, -length);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = (float)i / segments * Mathf.PI * 2f;
+                vertices[i + 1] = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, 0f);
+            }
+
+            var triangles = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                triangles.Add(0);
+                triangles.Add(i + 2);
+                triangles.Add(i + 1);
+                triangles.Add(i + 1);
+                triangles.Add(i + 2);
+                triangles.Add(segments + 1);
+            }
+
+            var mesh = new Mesh { name = "Nitro Jet" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            string path = Path.Combine(MeshFolder, "NitroJet.asset");
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing != null)
+            {
+                EditorUtility.CopySerialized(mesh, existing);
+                Object.DestroyImmediate(mesh);
+                return existing;
+            }
+
+            AssetDatabase.CreateAsset(mesh, path);
+            return mesh;
+        }
+
+        private static Mesh SaveMesh(
+            string name,
+            Vector3[] vertices,
+            Vector3[] normals,
+            Vector2[] uvs,
+            int[] triangles)
+        {
+            var mesh = new Mesh { name = name };
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+
+            string path = Path.Combine(MeshFolder, name + ".asset");
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing != null)
+            {
+                EditorUtility.CopySerialized(mesh, existing);
+                Object.DestroyImmediate(mesh);
+                return existing;
+            }
+
+            AssetDatabase.CreateAsset(mesh, path);
+            return mesh;
         }
 
         /// <summary>
@@ -449,13 +836,51 @@ namespace Unbounded.Editor
 
         private static void CreateChaseCamera(Transform target)
         {
-            var cameraObject = new GameObject("Chase Camera");
-            var camera = cameraObject.AddComponent<CinemachineCamera>();
-            camera.Target = new CameraTarget { TrackingTarget = target };
-            camera.Lens.FieldOfView = 62f;
-            camera.Priority = 10;
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                var cameraObject = new GameObject("Main Camera");
+                cameraObject.tag = "MainCamera";
+                cameraObject.transform.position = new Vector3(0f, 2.6f, -7.5f);
+                cameraObject.transform.rotation = Quaternion.Euler(8f, 0f, 0f);
+                camera = cameraObject.AddComponent<Camera>();
+                cameraObject.AddComponent<AudioListener>();
+                CinemachineBrain brain = cameraObject.AddComponent<CinemachineBrain>();
 
-            var follow = cameraObject.AddComponent<CinemachineThirdPersonFollow>();
+                // The car is a Rigidbody, so sample the camera on the physics clock:
+                // it keeps the rig glued to the car no matter the render rate.
+                brain.UpdateMethod = CinemachineBrain.UpdateMethods.FixedUpdate;
+            }
+
+            camera.fieldOfView = 62f;
+            camera.nearClipPlane = 0.25f;
+            camera.farClipPlane = 900f;
+            camera.allowHDR = true;
+            camera.allowMSAA = true;
+
+            UniversalAdditionalCameraData data = camera.GetUniversalAdditionalCameraData();
+            data.renderPostProcessing = true;
+            data.antialiasing = AntialiasingMode.None;
+            data.volumeLayerMask = ~0;
+            data.volumeTrigger = camera.transform;
+
+            var cameraObjectRoot = new GameObject("Chase Camera");
+            var virtualCamera = cameraObjectRoot.AddComponent<CinemachineCamera>();
+            virtualCamera.Target = new CameraTarget
+            {
+                TrackingTarget = target,
+                LookAtTarget = target
+            };
+            virtualCamera.Lens.FieldOfView = 62f;
+            virtualCamera.Priority = 10;
+
+            // The body keeps its distance; the composer is what actually points
+            // the lens at the car, so the view swings through the corners.
+            var aim = cameraObjectRoot.AddComponent<CinemachineRotationComposer>();
+            aim.TargetOffset = new Vector3(0f, 0.55f, 0f);
+            aim.Damping = new Vector2(0.12f, 0.22f);
+
+            var follow = cameraObjectRoot.AddComponent<CinemachineThirdPersonFollow>();
             follow.CameraDistance = 7.5f;
             follow.ShoulderOffset = new Vector3(0f, 1.4f, 0f);
             follow.VerticalArmLength = 1f;
@@ -685,87 +1110,6 @@ namespace Unbounded.Editor
             return text;
         }
 
-        private static void AddVisual(
-            Transform parent,
-            PrimitiveType primitive,
-            string name,
-            Vector3 localPosition,
-            Vector3 localScale,
-            Quaternion localRotation,
-            Material material)
-        {
-            GameObject visual = GameObject.CreatePrimitive(primitive);
-            visual.name = name;
-            Object.DestroyImmediate(visual.GetComponent<Collider>());
-            visual.transform.SetParent(parent, false);
-            visual.transform.localPosition = localPosition;
-            visual.transform.localRotation = localRotation;
-            visual.transform.localScale = localScale;
-            visual.GetComponent<MeshRenderer>().sharedMaterial = material;
-        }
-
-        private static Material CreateMaterial(
-            string path,
-            Color color,
-            float smoothness,
-            Texture2D texture,
-            Vector2 tiling)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null)
-            {
-                throw new IOException("URP Lit shader is unavailable.");
-            }
-
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                material = new Material(shader);
-                AssetDatabase.CreateAsset(material, path);
-            }
-
-            material.shader = shader;
-            material.color = color;
-            material.SetFloat("_Smoothness", smoothness);
-            material.SetFloat("_Metallic", 0f);
-
-            if (texture != null)
-            {
-                material.SetTexture("_BaseMap", texture);
-                material.SetTextureScale("_BaseMap", tiling);
-            }
-
-            EditorUtility.SetDirty(material);
-            return material;
-        }
-
-        private static Material CreateEmissiveMaterial(string path, Color color, float intensity)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null)
-            {
-                throw new IOException("URP Lit shader is unavailable.");
-            }
-
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                material = new Material(shader);
-                AssetDatabase.CreateAsset(material, path);
-            }
-
-            material.shader = shader;
-            material.color = color;
-            material.SetFloat("_Smoothness", 0.1f);
-            material.SetFloat("_Metallic", 0f);
-            material.EnableKeyword("_EMISSION");
-            material.SetColor("_EmissionColor", color * intensity);
-            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
-
-            EditorUtility.SetDirty(material);
-            return material;
-        }
-
         private static PhysicsMaterial CreateFrictionlessMaterial(string path)
         {
             var material = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(path);
@@ -782,73 +1126,6 @@ namespace Unbounded.Editor
             material.bounceCombine = PhysicsMaterialCombine.Minimum;
             EditorUtility.SetDirty(material);
             return material;
-        }
-
-        private static Texture2D CreateNoiseTexture(string path, Color low, Color high, float frequency)
-        {
-            const int size = 128;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            float offset = 0f;
-            foreach (char character in path)
-            {
-                offset += character;
-            }
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float u = offset + (float)x / size * frequency;
-                    float v = offset + (float)y / size * frequency;
-                    float noise = Mathf.PerlinNoise(u, v);
-                    texture.SetPixel(x, y, Color.Lerp(low, high, noise));
-                }
-            }
-
-            texture.Apply();
-            return SaveTexture(path, texture);
-        }
-
-        private static Texture2D CreateStripeTexture(string path, Color stripe, Color baseColor, int stripeCount)
-        {
-            const int size = 128;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    bool painted = (x * stripeCount / size) % 2 == 0;
-                    texture.SetPixel(x, y, painted ? stripe : baseColor);
-                }
-            }
-
-            texture.Apply();
-            return SaveTexture(path, texture);
-        }
-
-        private static Texture2D SaveTexture(string path, Texture2D texture)
-        {
-            File.WriteAllBytes(path, texture.EncodeToPNG());
-            Object.DestroyImmediate(texture);
-
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            importer.wrapMode = TextureWrapMode.Repeat;
-            importer.filterMode = FilterMode.Bilinear;
-            importer.mipmapEnabled = true;
-            importer.SaveAndReimport();
-
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        }
-
-        private static void EnsureFolder(string path)
-        {
-            if (!AssetDatabase.IsValidFolder(path))
-            {
-                Directory.CreateDirectory(path);
-                AssetDatabase.Refresh();
-            }
         }
     }
 }

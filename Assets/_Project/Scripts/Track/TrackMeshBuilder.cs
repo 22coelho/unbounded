@@ -88,6 +88,31 @@ namespace Unbounded.Track
             return Build(path, shape.MeshSpacing, BarrierUvScale, (left, true), (right, false));
         }
 
+        /// <summary>
+        /// The painted white lines just inside the Road's edges. They are what
+        /// keeps the edge of the Track readable at speed, so they sit a few
+        /// millimetres proud of the asphalt on the same sweep.
+        /// </summary>
+        public static TrackMeshData BuildEdgeLines(TrackPath path, TrackShape shape)
+        {
+            const float width = 0.24f;
+            const float inset = 0.06f;
+            float height = shape.RoadHeight + 0.006f;
+
+            var left = new[]
+            {
+                new ProfilePoint(-shape.HalfWidth + inset, height, 0f, 1f, 0f),
+                new ProfilePoint(-shape.HalfWidth + inset + width, height, 0f, 1f, 1f)
+            };
+            var right = new[]
+            {
+                new ProfilePoint(shape.HalfWidth - inset - width, height, 0f, 1f, 0f),
+                new ProfilePoint(shape.HalfWidth - inset, height, 0f, 1f, 1f)
+            };
+
+            return Build(path, shape.MeshSpacing, RoadUvScale, (left, false), (right, false));
+        }
+
         public static TrackMeshData BuildStartLine(TrackPath path, TrackShape shape)
         {
             Vector3 forward = path.SampleDirection(0f);
