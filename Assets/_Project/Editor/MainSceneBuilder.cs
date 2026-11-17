@@ -947,6 +947,16 @@ namespace Unbounded.Editor
             timerRect.sizeDelta = new Vector2(420f, 64f);
             timer.text = "0:00.00";
 
+            Text bestLap = CreateText(hudObject.transform, "Best Lap", font, 26, TextAnchor.MiddleRight);
+            RectTransform bestLapRect = bestLap.rectTransform;
+            bestLapRect.anchorMin = new Vector2(1f, 1f);
+            bestLapRect.anchorMax = new Vector2(1f, 1f);
+            bestLapRect.pivot = new Vector2(1f, 1f);
+            bestLapRect.anchoredPosition = new Vector2(-36f, -92f);
+            bestLapRect.sizeDelta = new Vector2(420f, 44f);
+            bestLap.text = "BEST --:--.--";
+            bestLap.color = new Color(1f, 0.93f, 0.55f);
+
             CreateNitroMeter(hudObject.transform, font, out RectTransform nitroFill,
                 out Image nitroFillImage, out Text nitroLabel);
 
@@ -980,12 +990,19 @@ namespace Unbounded.Editor
 
             GameObject pauseScreen = CreatePanel(hudObject.transform, "Pause Screen", font,
                 "PAUSED", 86, out Text pauseSummary);
-            pauseSummary.text = "ESC / START TO RESUME\nQ / SELECT TO QUIT";
+            pauseSummary.text =
+                "  MASTER VOLUME   [########--]   80%\n" +
+                "> STEERING        [#####-----]   1.00x\n\n" +
+                "BEST LAP   --:--.--\n\n" +
+                "UP / DOWN SELECT    LEFT / RIGHT ADJUST\n" +
+                "BACKSPACE / X CLEAR BEST LAP\n" +
+                "ESC / START RESUME    Q / SELECT QUIT";
 
             var hud = hudObject.AddComponent<RaceHud>();
             hud.Configure(lap, position, wrongWay);
-            hud.ConfigureRace(countdown, timer, finishScreen, finishSummary, pauseScreen);
+            hud.ConfigureRace(countdown, timer, finishScreen, finishSummary, pauseScreen, pauseSummary);
             hud.ConfigureNitro(nitroFill, nitroFillImage, nitroLabel, car);
+            hud.ConfigureBestLap(bestLap);
             hud.Bind(lapProgress);
             return hud;
         }

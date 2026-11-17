@@ -24,9 +24,11 @@ namespace Unbounded.UI
         [SerializeField] private Text _wrongWayText;
         [SerializeField] private Text _countdownText;
         [SerializeField] private Text _timerText;
+        [SerializeField] private Text _bestLapText;
         [SerializeField] private GameObject _finishScreen;
         [SerializeField] private Text _finishSummaryText;
         [SerializeField] private GameObject _pauseScreen;
+        [SerializeField] private Text _pauseSummaryText;
         [SerializeField] private MonoBehaviour _readoutSource;
         [SerializeField] private RectTransform _nitroFill;
         [SerializeField] private Image _nitroFillImage;
@@ -42,7 +44,9 @@ namespace Unbounded.UI
         private int _shownWrongWay = -1;
         private int _shownTime = -1;
         private int _shownNitro = -1;
+        private int _shownBestLap = -2;
         private string _shownCountdown;
+        private string _shownPause;
         private bool _finishShown;
 
         /// <summary>Wires the permanent HUD labels when the scene is built from the editor.</summary>
@@ -69,13 +73,14 @@ namespace Unbounded.UI
 
         /// <summary>Wires the Race flow labels and overlays when the scene is built from the editor.</summary>
         public void ConfigureRace(Text countdownText, Text timerText, GameObject finishScreen,
-            Text finishSummaryText, GameObject pauseScreen)
+            Text finishSummaryText, GameObject pauseScreen, Text pauseSummaryText)
         {
             _countdownText = countdownText;
             _timerText = timerText;
             _finishScreen = finishScreen;
             _finishSummaryText = finishSummaryText;
             _pauseScreen = pauseScreen;
+            _pauseSummaryText = pauseSummaryText;
 
             if (_countdownText != null)
             {
@@ -91,6 +96,13 @@ namespace Unbounded.UI
             {
                 _pauseScreen.SetActive(false);
             }
+        }
+
+        /// <summary>Wires the permanent best Lap readout when the scene is built from the editor.</summary>
+        public void ConfigureBestLap(Text bestLapText)
+        {
+            _bestLapText = bestLapText;
+            _shownBestLap = -2;
         }
 
         /// <summary>Points the HUD at the object that computes the race.</summary>
@@ -208,6 +220,54 @@ namespace Unbounded.UI
             _finishSummaryText.text = summary.ToString();
         }
 
+        /// <summary>Shows the persistent best Lap, or dashes when none is stored yet.</summary>
+        public void SetBestLap(float seconds, bool hasBestLap)
+        {
+            if (_bestLapText == null)
+            {
+                return;
+            }
+
+            int hundredths = hasBestLap ? Mathf.FloorToInt(Mathf.Max(0f, seconds) * 100f) : -1;
+            if (hundredths == _shownBestLap)
+            {
+                return;
+            }
+
+            _shownBestLap = hundredths;
+            _bestLapText.text = hasBestLap
+                ? "BEST " + FormatTime(seconds)
+                : "BEST --:--.--";
+        }
+
+        /// <summary>
+        /// Shows the pause screen as a small settings menu: the two adjustable
+        /// preferences, the player's best Lap, and the keys that clear or leave
+        /// it. The selected row is marked with an arrow.
+        /// </summary>
+        public void ShowPauseMenu(GameSettings settings, int selection, bool hasBestLap, float bestLapTime)
+        {
+            if (_pauseScreen == null || _pauseSummaryText == null)
+            {
+                return;
+            }
+
+            if (!_pauseScreen.activeSelf)
+            {
+                _pauseScreen.SetActive(true);
+                _shownPause = null;
+            }
+
+            string text = BuildPauseMenu(settings, selection, hasBestLap, bestLapTime);
+            if (text == _shownPause)
+            {
+                return;
+            }
+
+            _shownPause = text;
+            _pauseSummaryText.text = text;
+        }
+
         public void HideFinish()
         {
             _finishShown = false;
@@ -223,7 +283,47 @@ namespace Unbounded.UI
             if (_pauseScreen != null && _pauseScreen.activeSelf != paused)
             {
                 _pauseScreen.SetActive(paused);
+                if (!paused)
+                {
+                    _shownPause = null;
+                }
             }
+        }
+
+        private static string BuildPauseMenu(
+            GameSettings settings, int selection, bool hasBestLap, float bestLapTime)
+        {
+            float volume = Mathf.Clamp01(settings.MasterVolume);
+            float sensitivity = Mathf.InverseLerp(
+                GameSettings.MinSteeringSensitivity,
+                GameSettings.MaxSteeringSensitivity,
+                settings.SteeringSensitivity);
+
+            var menu = new StringBuilder();
+            menu.Append(Row(selection == 0, "MASTER VOLUME", volume,
+                Mathf.RoundToInt(volume * 100f) + "%"));
+            menu.Append('\n');
+            menu.Append(Row(selection == 1, "STEERING      ", sensitivity,
+                settings.SteeringSensitivity.ToString("0.00", CultureInfo.InvariantCulture) + "x"));
+            menu.Append("\n\nBEST LAP   ");
+            menu.Append(hasBestLap ? FormatTime(bestLapTime) : "--:--.--");
+            menu.Append("\n\n");
+            menu.Append("UP / DOWN SELECT    LEFT / RIGHT ADJUST\n");
+            menu.Append("BACKSPACE / X CLEAR BEST LAP\n");
+            menu.Append("ESC / START RESUME    Q / SELECT QUIT");
+            return menu.ToString();
+        }
+
+        private static string Row(bool selected, string label, float fill, string value)
+        {
+            return (selected ? "> " : "  ") + label + "   " + Meter(fill, 10) + "   " + value;
+        }
+
+        /// <summary>A text bar, so the generated UI needs no slider sprites.</summary>
+        private static string Meter(float fill, int width)
+        {
+            int filled = Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(fill) * width), 0, width);
+            return "[" + new string('#', filled) + new string('-', width - filled) + "]";
         }
 
         private void Awake()

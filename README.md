@@ -15,7 +15,9 @@ scene reload — a field of five AI opponents racing the derived Racing line, an
 Nitro with a draining, recharging HUD meter and the same lockout for player and
 AI are in place. Every car is audible: engine pitch follows speed and throttle,
 tyre screech follows lateral slip, and collisions play an impact scaled by
-closing speed, with 3D attenuation and a distance filter on the field. The
+closing speed, with 3D attenuation and a distance filter on the field. The pause
+screen doubles as a settings menu for master volume and steering sensitivity,
+and both settings plus the player's best lap persist through PlayerPrefs. The
 circuit is dressed from the free Kenney Racing and Nature kits — liveried cars,
 a start gantry, grandstands, pits, signage, pylons, and a seeded treeline — all
 mapped onto one palette under a golden-hour sky, with bloom, camera motion blur,
@@ -82,4 +84,7 @@ Handbrake arrives with a later milestone ticket.
 | Reset to track | Y / Triangle | R |
 | Pause / resume | Start | Escape |
 | Quit from pause | Select | Q |
+| Pause menu select | D-pad up/down | Up / Down or W / S |
+| Pause menu adjust | D-pad or left stick left/right | Left / Right or A / D |
+| Clear best lap | X / Square | Backspace |
 | Restart after the finish | Y / Triangle | R |

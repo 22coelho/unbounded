@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Unbounded.Core;
 using Unbounded.Race;
 using Unbounded.UI;
 using UnityEngine;
@@ -16,6 +17,12 @@ namespace Unbounded.App
     public sealed class RaceController : MonoBehaviour
     {
         private const float GoDisplaySeconds = 0.8f;
+        private const int PauseRowCount = 2;
+        private const float PauseThreshold = 0.5f;
+        private const float VolumeStep = 0.05f;
+        private const float SensitivityStep = 0.05f;
+        private const float PauseRepeatDelay = 0.35f;
+        private const float PauseRepeatInterval = 0.1f;
 
         [SerializeField] private LapProgressTracker _lapProgress;
         [SerializeField] private PlayerInputReader _input;
@@ -32,6 +39,13 @@ namespace Unbounded.App
         private string[] _racerNames;
         private string[] _finishOrder;
         private int _playerPosition = 1;
+
+        private GameSettings _settings = GameSettings.Default;
+        private BestLapRecord _bestLap = new BestLapRecord();
+        private int _pauseRow;
+        private bool _pauseAxisHeld;
+        private bool _pauseVerticalHeld;
+        private float _pauseRepeat;
 
         /// <summary>The Race being run.</summary>
         public RaceState Race => _race;
@@ -84,6 +98,8 @@ namespace Unbounded.App
         private void Awake()
         {
             AudioListener.pause = false;
+            _settings = PlayerSettingsStore.LoadSettings();
+            _bestLap = new BestLapRecord(PlayerSettingsStore.LoadBestLap());
 
             if (_lapProgress == null)
             {
@@ -99,6 +115,8 @@ namespace Unbounded.App
             {
                 _hud = FindAnyObjectByType<RaceHud>();
             }
+
+            ApplySettings();
 
             if (_opponents == null || _opponents.Length == 0)
             {
@@ -164,6 +182,7 @@ namespace Unbounded.App
                     return;
                 }
 
+                HandlePauseMenu();
                 RefreshHud();
                 return;
             }
@@ -196,7 +215,25 @@ namespace Unbounded.App
 
         private void OnLapCompleted()
         {
-            _race?.CompleteLap();
+            if (_race == null)
+            {
+                return;
+            }
+
+            _race.CompleteLap();
+
+            // The player's Lap event is the only one that reaches here, so a
+            // faster Lap replaces the stored record and is written out at once.
+            if (_race.LastLapTime > 0f && _bestLap.TryRecord(_race.LastLapTime))
+            {
+                PlayerSettingsStore.SaveBestLap(_bestLap.Time);
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            PlayerSettingsStore.SaveSettings(_settings);
+            PlayerSettingsStore.Flush();
         }
 
         /// <summary>
@@ -214,6 +251,18 @@ namespace Unbounded.App
             Time.timeScale = paused ? 0f : 1f;
             AudioListener.pause = paused;
 
+            if (paused)
+            {
+                _pauseAxisHeld = false;
+                _pauseVerticalHeld = false;
+                _pauseRepeat = 0f;
+            }
+            else
+            {
+                PlayerSettingsStore.SaveSettings(_settings);
+                PlayerSettingsStore.Flush();
+            }
+
             ApplyControls(!paused && _race.Phase == RacePhase.Racing);
 
             _hud?.SetPaused(paused);
@@ -224,6 +273,8 @@ namespace Unbounded.App
             Time.timeScale = 1f;
             _paused = false;
             AudioListener.pause = false;
+            PlayerSettingsStore.SaveSettings(_settings);
+            PlayerSettingsStore.Flush();
 
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
@@ -385,7 +436,13 @@ namespace Unbounded.App
             }
 
             _hud.SetRaceTime(_race.RaceTime);
+            _hud.SetBestLap(_bestLap.Time, _bestLap.HasTime);
             _hud.SetPaused(_paused);
+
+            if (_paused)
+            {
+                _hud.ShowPauseMenu(_settings, _pauseRow, _bestLap.HasTime, _bestLap.Time);
+            }
 
             RefreshStandings();
             _hud.SetPosition(_playerPosition, _field.Length);
@@ -397,12 +454,100 @@ namespace Unbounded.App
                     _finishOrder = BuildFinishOrder();
                 }
 
-                _hud.ShowFinish(_race.RaceTime, _race.BestLapTime, _race.HasLapTimes, _finishOrder);
+                _hud.ShowFinish(_race.RaceTime, _bestLap.Time, _bestLap.HasTime, _finishOrder);
             }
             else
             {
                 _hud.HideFinish();
             }
+        }
+
+        /// <summary>
+        /// Moves between the two settings and nudges the selected one. The
+        /// vertical axis steps the row on each push; the horizontal axis
+        /// adjusts immediately and then repeats while held.
+        /// </summary>
+        private void HandlePauseMenu()
+        {
+            if (_input == null)
+            {
+                return;
+            }
+
+            if (_input.ClearBestPressed)
+            {
+                ClearBestLap();
+            }
+
+            Vector2 navigate = _input.MenuNavigate;
+
+            if (Mathf.Abs(navigate.y) > PauseThreshold)
+            {
+                if (!_pauseVerticalHeld)
+                {
+                    _pauseVerticalHeld = true;
+                    int step = navigate.y > 0f ? PauseRowCount - 1 : 1;
+                    _pauseRow = (_pauseRow + step) % PauseRowCount;
+                }
+            }
+            else
+            {
+                _pauseVerticalHeld = false;
+            }
+
+            if (Mathf.Abs(navigate.x) <= PauseThreshold)
+            {
+                _pauseAxisHeld = false;
+                _pauseRepeat = 0f;
+                return;
+            }
+
+            if (!_pauseAxisHeld)
+            {
+                _pauseAxisHeld = true;
+                AdjustPauseRow(Mathf.Sign(navigate.x));
+                _pauseRepeat = PauseRepeatDelay;
+                return;
+            }
+
+            _pauseRepeat -= Time.unscaledDeltaTime;
+            if (_pauseRepeat <= 0f)
+            {
+                AdjustPauseRow(Mathf.Sign(navigate.x));
+                _pauseRepeat = PauseRepeatInterval;
+            }
+        }
+
+        private void AdjustPauseRow(float direction)
+        {
+            _settings = _pauseRow == 0
+                ? _settings.WithMasterVolume(_settings.MasterVolume + direction * VolumeStep)
+                : _settings.WithSteeringSensitivity(
+                    _settings.SteeringSensitivity + direction * SensitivityStep);
+
+            ApplySettings();
+            PlayerSettingsStore.SaveSettings(_settings);
+        }
+
+        private void ApplySettings()
+        {
+            AudioListener.volume = _settings.MasterVolume;
+
+            if (_input != null)
+            {
+                _input.SteeringSensitivity = _settings.SteeringSensitivity;
+            }
+        }
+
+        /// <summary>Drops the stored best Lap, but only when the player asks for it.</summary>
+        private void ClearBestLap()
+        {
+            if (!_bestLap.Clear())
+            {
+                return;
+            }
+
+            PlayerSettingsStore.ClearBestLap();
         }
     }
 }
