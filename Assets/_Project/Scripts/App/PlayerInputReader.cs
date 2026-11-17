@@ -21,9 +21,13 @@ namespace Unbounded.App
         private InputAction _steer;
         private InputAction _throttle;
         private InputAction _brake;
+        private InputAction _nitro;
         private InputAction _reset;
         private InputAction _pause;
         private InputAction _quit;
+
+        /// <summary>The car this reader drives.</summary>
+        public CarController Car => _car;
 
         /// <summary>Whether throttle, steering, brake, and reset reach the car.</summary>
         public bool ControlsEnabled { get; set; } = true;
@@ -64,6 +68,7 @@ namespace Unbounded.App
             _steer = _driveMap.FindAction("Steer", true);
             _throttle = _driveMap.FindAction("Throttle", true);
             _brake = _driveMap.FindAction("Brake", true);
+            _nitro = _driveMap.FindAction("Nitro", true);
             _reset = _driveMap.FindAction("Reset", true);
             _pause = _driveMap.FindAction("Pause", true);
             _quit = _driveMap.FindAction("Quit", true);
@@ -109,7 +114,8 @@ namespace Unbounded.App
             {
                 Steer = Mathf.Clamp(_steer.ReadValue<float>(), -1f, 1f),
                 Throttle = Mathf.Clamp01(_throttle.ReadValue<float>()),
-                Brake = Mathf.Clamp01(_brake.ReadValue<float>())
+                Brake = Mathf.Clamp01(_brake.ReadValue<float>()),
+                Nitro = _nitro != null && _nitro.IsPressed()
             });
         }
     }

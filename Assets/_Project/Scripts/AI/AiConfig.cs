@@ -46,6 +46,21 @@ namespace Unbounded.AI
         /// <summary>The most catch-up adds to <see cref="Pace"/>.</summary>
         public float CatchUpBoost;
 
+        /// <summary>Curvature below which the line ahead counts as a straight, in radians per metre.</summary>
+        public float NitroStraightCurvature;
+
+        /// <summary>Metres of line checked when deciding whether the car is on a straight.</summary>
+        public float NitroStraightLookahead;
+
+        /// <summary>Speed below which the driver saves Nitro rather than waste it off the line.</summary>
+        public float NitroMinSpeed;
+
+        /// <summary>Charge the tank must hold before the driver will spend it.</summary>
+        public float NitroMinCharge;
+
+        /// <summary>Speed the driver treats as the car's ceiling while boosting.</summary>
+        public float NitroTopSpeed;
+
         /// <summary>Speed below which the car counts as stuck, in metres per second.</summary>
         public float StuckSpeed;
 
@@ -69,6 +84,11 @@ namespace Unbounded.AI
             CatchUpGap = 80f,
             CatchUpRange = 120f,
             CatchUpBoost = 0.08f,
+            NitroStraightCurvature = 0.008f,
+            NitroStraightLookahead = 30f,
+            NitroMinSpeed = 25f,
+            NitroMinCharge = 0.1f,
+            NitroTopSpeed = 74f,
             StuckSpeed = 1.5f,
             StuckSeconds = 1.5f,
             ReverseSeconds = 1.2f

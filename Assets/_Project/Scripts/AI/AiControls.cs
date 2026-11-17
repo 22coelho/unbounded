@@ -15,6 +15,9 @@ namespace Unbounded.AI
         /// <summary>-1 (left) to 1 (right).</summary>
         public float Steer;
 
+        /// <summary>Whether the car should spend Nitro this step.</summary>
+        public bool Nitro;
+
         public static AiControls Neutral => new AiControls();
     }
 }

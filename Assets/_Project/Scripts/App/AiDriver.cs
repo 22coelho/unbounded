@@ -89,6 +89,7 @@ namespace Unbounded.App
                 _body.WakeUp();
             }
 
+            _car?.ResetNitro();
             _driver?.Reset();
             ResetProgress();
         }
@@ -151,7 +152,9 @@ namespace Unbounded.App
                     Position = _body.position,
                     Forward = _body.rotation * Vector3.forward,
                     ForwardSpeed = localVelocity.z,
-                    PlayerProgressAhead = _player != null ? _player.Progress - _progress : 0f
+                    PlayerProgressAhead = _player != null ? _player.Progress - _progress : 0f,
+                    NitroCharge = _car.NitroCharge,
+                    NitroLockedOut = _car.IsNitroLockedOut
                 },
                 _track.RacingLine,
                 Time.fixedDeltaTime);
@@ -160,7 +163,8 @@ namespace Unbounded.App
             {
                 Throttle = controls.Throttle,
                 Brake = controls.Brake,
-                Steer = controls.Steer
+                Steer = controls.Steer,
+                Nitro = controls.Nitro
             });
         }
 

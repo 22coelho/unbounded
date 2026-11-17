@@ -89,6 +89,10 @@ namespace Unbounded.Editor
                 0.15f,
                 null,
                 Vector2.one);
+            Material nitroMaterial = CreateEmissiveMaterial(
+                Path.Combine(MaterialsFolder, "NitroFlame.mat"),
+                new Color(1f, 0.48f, 0.08f),
+                5f);
 
             PhysicsMaterial frictionless = CreateFrictionlessMaterial(
                 Path.Combine(PhysicsFolder, "Frictionless.physicMaterial"));
@@ -107,6 +111,7 @@ namespace Unbounded.Editor
                 bodyMaterial,
                 wheelMaterial,
                 startLineMaterial,
+                nitroMaterial,
                 actions,
                 frictionless,
                 track);
@@ -114,11 +119,12 @@ namespace Unbounded.Editor
 
             var lapProgress = car.GetComponent<LapProgressTracker>();
             var input = car.GetComponent<PlayerInputReader>();
-            RaceHud hud = CreateHud(lapProgress);
+            RaceHud hud = CreateHud(lapProgress, car.GetComponent<CarController>());
             AiDriver[] opponents = CreateOpponents(
                 bodyMaterial,
                 wheelMaterial,
                 startLineMaterial,
+                nitroMaterial,
                 frictionless,
                 track,
                 lapProgress);
@@ -203,6 +209,7 @@ namespace Unbounded.Editor
             Material bodyMaterial,
             Material wheelMaterial,
             Material accentMaterial,
+            Material nitroMaterial,
             InputActionAsset actions,
             PhysicsMaterial physicMaterial,
             TrackRoot track)
@@ -217,6 +224,7 @@ namespace Unbounded.Editor
                 track,
                 out CarController controller);
             car.tag = "Player";
+            AddNitroEffect(car, nitroMaterial, isPlayer: true);
 
             var lapProgress = car.AddComponent<LapProgressTracker>();
             lapProgress.Configure(track, car.GetComponent<Rigidbody>());
@@ -237,6 +245,7 @@ namespace Unbounded.Editor
             Material bodyMaterial,
             Material wheelMaterial,
             Material accentMaterial,
+            Material nitroMaterial,
             PhysicsMaterial physicMaterial,
             TrackRoot track,
             LapProgressTracker player)
@@ -257,6 +266,8 @@ namespace Unbounded.Editor
                     physicMaterial,
                     track,
                     out CarController controller);
+
+                AddNitroEffect(car, nitroMaterial, isPlayer: false);
 
                 AiConfig config = AiConfig.Default;
                 config.Pace = 0.93f + slot * 0.015f;
@@ -325,6 +336,44 @@ namespace Unbounded.Editor
             return car;
         }
 
+        /// <summary>
+        /// Two emissive exhaust jets and a glow light that switch on with the
+        /// burst, plus a looping hiss. The player hears their own Nitro dry;
+        /// opponents are placed in the world.
+        /// </summary>
+        private static void AddNitroEffect(GameObject car, Material flameMaterial, bool isPlayer)
+        {
+            var flames = new GameObject("Nitro Flames");
+            flames.transform.SetParent(car.transform, false);
+            AddVisual(flames.transform, PrimitiveType.Cube, "Flame L", new Vector3(-0.45f, 0.5f, -2.35f),
+                new Vector3(0.32f, 0.32f, 1.2f), Quaternion.identity, flameMaterial);
+            AddVisual(flames.transform, PrimitiveType.Cube, "Flame R", new Vector3(0.45f, 0.5f, -2.35f),
+                new Vector3(0.32f, 0.32f, 1.2f), Quaternion.identity, flameMaterial);
+            flames.SetActive(false);
+
+            var glowObject = new GameObject("Nitro Glow");
+            glowObject.transform.SetParent(car.transform, false);
+            glowObject.transform.localPosition = new Vector3(0f, 0.55f, -2.7f);
+            var glow = glowObject.AddComponent<Light>();
+            glow.type = LightType.Point;
+            glow.color = new Color(1f, 0.5f, 0.12f);
+            glow.range = 7f;
+            glow.intensity = 0f;
+            glow.shadows = LightShadows.None;
+            glow.enabled = false;
+
+            var audio = car.AddComponent<AudioSource>();
+            audio.playOnAwake = false;
+            audio.loop = true;
+            audio.spatialBlend = isPlayer ? 0f : 0.7f;
+            audio.rolloffMode = AudioRolloffMode.Logarithmic;
+            audio.minDistance = 3f;
+            audio.maxDistance = 60f;
+
+            var effect = car.AddComponent<NitroBoostEffect>();
+            effect.Configure(car.GetComponent<CarController>(), flames, glow, audio);
+        }
+
         private static void CreateChaseCamera(Transform target)
         {
             var cameraObject = new GameObject("Chase Camera");
@@ -353,7 +402,7 @@ namespace Unbounded.Editor
             };
         }
 
-        private static RaceHud CreateHud(LapProgressTracker lapProgress)
+        private static RaceHud CreateHud(LapProgressTracker lapProgress, CarController car)
         {
             var hudObject = new GameObject("HUD");
             var canvas = hudObject.AddComponent<Canvas>();
@@ -398,6 +447,9 @@ namespace Unbounded.Editor
             timerRect.sizeDelta = new Vector2(420f, 64f);
             timer.text = "0:00.00";
 
+            CreateNitroMeter(hudObject.transform, font, out RectTransform nitroFill,
+                out Image nitroFillImage, out Text nitroLabel);
+
             Text wrongWay = CreateText(hudObject.transform, "Wrong Way", font, 44, TextAnchor.MiddleCenter);
             RectTransform wrongWayRect = wrongWay.rectTransform;
             wrongWayRect.anchorMin = new Vector2(0.5f, 1f);
@@ -433,8 +485,57 @@ namespace Unbounded.Editor
             var hud = hudObject.AddComponent<RaceHud>();
             hud.Configure(lap, position, wrongWay);
             hud.ConfigureRace(countdown, timer, finishScreen, finishSummary, pauseScreen);
+            hud.ConfigureNitro(nitroFill, nitroFillImage, nitroLabel, car);
             hud.Bind(lapProgress);
             return hud;
+        }
+
+        /// <summary>
+        /// The Nitro meter: a label over a dark bar whose fill is anchored
+        /// across the charge left. Anchoring avoids needing a sprite for a
+        /// filled image, so the whole HUD stays generated from code.
+        /// </summary>
+        private static void CreateNitroMeter(
+            Transform parent,
+            Font font,
+            out RectTransform fill,
+            out Image fillImage,
+            out Text label)
+        {
+            label = CreateText(parent, "Nitro Label", font, 26, TextAnchor.LowerLeft);
+            RectTransform labelRect = label.rectTransform;
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.zero;
+            labelRect.pivot = Vector2.zero;
+            labelRect.anchoredPosition = new Vector2(36f, 56f);
+            labelRect.sizeDelta = new Vector2(340f, 34f);
+            label.text = "NITRO";
+            label.color = new Color(0.28f, 0.82f, 1f);
+
+            var bar = new GameObject("Nitro Meter", typeof(RectTransform));
+            bar.transform.SetParent(parent, false);
+            var barRect = bar.GetComponent<RectTransform>();
+            barRect.anchorMin = Vector2.zero;
+            barRect.anchorMax = Vector2.zero;
+            barRect.pivot = Vector2.zero;
+            barRect.anchoredPosition = new Vector2(36f, 24f);
+            barRect.sizeDelta = new Vector2(340f, 26f);
+
+            var background = bar.AddComponent<Image>();
+            background.color = new Color(0.02f, 0.03f, 0.05f, 0.8f);
+            background.raycastTarget = false;
+
+            var fillObject = new GameObject("Fill", typeof(RectTransform));
+            fillObject.transform.SetParent(bar.transform, false);
+            fill = fillObject.GetComponent<RectTransform>();
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = Vector2.one;
+            fill.offsetMin = new Vector2(3f, 3f);
+            fill.offsetMax = new Vector2(-3f, -3f);
+
+            fillImage = fillObject.AddComponent<Image>();
+            fillImage.color = new Color(0.28f, 0.82f, 1f);
+            fillImage.raycastTarget = false;
         }
 
         /// <summary>
@@ -560,6 +661,33 @@ namespace Unbounded.Editor
                 material.SetTexture("_BaseMap", texture);
                 material.SetTextureScale("_BaseMap", tiling);
             }
+
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static Material CreateEmissiveMaterial(string path, Color color, float intensity)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+            {
+                throw new IOException("URP Lit shader is unavailable.");
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.shader = shader;
+            material.color = color;
+            material.SetFloat("_Smoothness", 0.1f);
+            material.SetFloat("_Metallic", 0f);
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", color * intensity);
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
 
             EditorUtility.SetDirty(material);
             return material;

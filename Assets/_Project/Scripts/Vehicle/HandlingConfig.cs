@@ -33,6 +33,13 @@ namespace Unbounded.Vehicle
         public float MaxYawAcceleration;
         public float BrakeToReverseSpeed;
 
+        public float NitroForce;
+        public float NitroTopSpeed;
+        public float NitroDuration;
+        public float NitroRechargeSeconds;
+        public float NitroRechargeDelay;
+        public float NitroUnlockCharge;
+
         public static HandlingConfig Default => new HandlingConfig
         {
             MaxSpeed = 60f,
@@ -57,7 +64,14 @@ namespace Unbounded.Vehicle
 
             YawResponse = 10f,
             MaxYawAcceleration = 30f,
-            BrakeToReverseSpeed = 0.5f
+            BrakeToReverseSpeed = 0.5f,
+
+            NitroForce = 14000f,
+            NitroTopSpeed = 80f,
+            NitroDuration = 2.5f,
+            NitroRechargeSeconds = 8f,
+            NitroRechargeDelay = 0.8f,
+            NitroUnlockCharge = 0.25f
         };
     }
 }

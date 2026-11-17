@@ -1,3 +1,4 @@
+using Unbounded.Core;
 using UnityEngine;
 
 namespace Unbounded.Vehicle
@@ -8,7 +9,7 @@ namespace Unbounded.Vehicle
     /// resulting forces and yaw acceleration at the axles.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
-    public sealed class CarController : MonoBehaviour
+    public sealed class CarController : MonoBehaviour, INitroReadout
     {
         [SerializeField] private HandlingConfig _config = HandlingConfig.Default;
         [SerializeField] private float _frontAxleOffset = 1.4f;
@@ -35,6 +36,18 @@ namespace Unbounded.Vehicle
         public HandlingInput CurrentInput => _input;
 
         public HandlingForces LastForces { get; private set; }
+
+        public float NitroCharge => _model?.NitroCharge ?? 0f;
+
+        public bool IsBoosting => _model != null && _model.IsNitroActive;
+
+        public bool IsNitroLockedOut => _model != null && _model.IsNitroLockedOut;
+
+        /// <summary>Fills the Nitro tank, for a restarted Race or a car put back on its Grid slot.</summary>
+        public void ResetNitro()
+        {
+            _model?.ResetNitro();
+        }
 
         private void Awake()
         {

@@ -863,6 +863,49 @@ namespace Unbounded.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator NitroBoostsTheCarShowsOnTheHudAndFiresItsEffect()
+        {
+            yield return LoadMainScene();
+
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            RaceHud hud = Object.FindAnyObjectByType<RaceHud>();
+            Assert.That(car, Is.Not.Null);
+            Assert.That(hud, Is.Not.Null);
+            DisablePlayerInput();
+
+            Transform flames = car.transform.Find("Nitro Flames");
+            RectTransform fill = hud.transform.Find("Nitro Meter/Fill") as RectTransform;
+            AudioSource audio = car.GetComponent<AudioSource>();
+
+            Assert.That(flames, Is.Not.Null, "The player car must carry a Nitro effect.");
+            Assert.That(fill, Is.Not.Null, "The HUD must show a Nitro meter.");
+            Assert.That(audio, Is.Not.Null);
+            Assert.That(audio.clip, Is.Not.Null, "The Nitro burst must be audible, not just visible.");
+            Assert.That(flames.gameObject.activeSelf, Is.False);
+
+            float before = car.NitroCharge;
+            car.SetInput(new HandlingInput { Throttle = 1f, Nitro = true });
+
+            for (int i = 0; i < 40; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(car.IsBoosting, Is.True, "Nitro input should fire the boost.");
+            Assert.That(car.NitroCharge, Is.LessThan(before), "Boosting should drain the tank.");
+            Assert.That(flames.gameObject.activeSelf, Is.True, "The exhaust flames should show the burst.");
+            Assert.That(audio.isPlaying, Is.True, "The burst should be audible.");
+            Assert.That(fill.anchorMax.x, Is.LessThan(1f), "The HUD meter should drain with the tank.");
+
+            car.SetInput(default);
+            yield return new WaitForFixedUpdate();
+            yield return null;
+
+            Assert.That(car.IsBoosting, Is.False);
+            Assert.That(flames.gameObject.activeSelf, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator ResetReturnsTheCarToTheLastCheckpointItPassed()
         {
             yield return LoadMainScene();

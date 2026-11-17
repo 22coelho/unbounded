@@ -11,8 +11,9 @@ keyboard input, a generated closed circuit with Kerbs and Barriers, validated
 Laps with ordered Checkpoints and reset, a HUD with the lap counter and
 wrong-way warning, a chase camera, the Race loop — Countdown, race timer, pause,
 three-Lap finish, live position and final standings, and restart without a
-scene reload — and a field of five AI opponents racing the derived Racing line
-are in place.
+scene reload — a field of five AI opponents racing the derived Racing line, and
+Nitro with a draining, recharging HUD meter and the same lockout for player and
+AI are in place.
 
 ## Requirements
 
@@ -63,7 +64,7 @@ with a 60-second gameplay clip.
 
 ## Controls
 
-Handbrake and nitro arrive with later milestone tickets.
+Handbrake arrives with a later milestone ticket.
 
 | Action | Gamepad | Keyboard |
 | --- | --- | --- |

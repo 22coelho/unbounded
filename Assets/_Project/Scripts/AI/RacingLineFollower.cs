@@ -63,7 +63,9 @@ namespace Unbounded.AI
                 return new AiControls { Brake = 1f, Steer = -steer };
             }
 
-            float target = TargetSpeed(line, distance, speed, pace);
+            float curvature = MaxCurvatureAhead(line, distance, speed * _config.BrakingSeconds);
+            bool useNitro = WantsNitro(situation, line, distance);
+            float target = TargetSpeed(pace, curvature, useNitro);
             float error = target - speed;
 
             if (error > ThrottleDeadband)
@@ -71,7 +73,8 @@ namespace Unbounded.AI
                 return new AiControls
                 {
                     Steer = steer,
-                    Throttle = Mathf.Clamp01(0.5f + error * 0.25f)
+                    Throttle = Mathf.Clamp01(0.5f + error * 0.25f),
+                    Nitro = useNitro
                 };
             }
 
@@ -84,7 +87,29 @@ namespace Unbounded.AI
                 };
             }
 
-            return new AiControls { Steer = steer, Throttle = 0.25f };
+            return new AiControls { Steer = steer, Throttle = 0.25f, Nitro = useNitro };
+        }
+
+        /// <summary>
+        /// Nitro is spent only when it will pay for itself: a straight ahead,
+        /// enough speed to make the push worthwhile, and charge still in the
+        /// tank. The shared handling model owns the drain and the lockout, so
+        /// the opponent plays by the same rules as the player.
+        /// </summary>
+        private bool WantsNitro(AiSituation situation, IRacingLine line, float distance)
+        {
+            if (situation.NitroCharge < _config.NitroMinCharge ||
+                situation.NitroLockedOut ||
+                situation.ForwardSpeed < _config.NitroMinSpeed)
+            {
+                return false;
+            }
+
+            // Only the immediate road matters here. The braking scan is longer
+            // and looks into the next corner, which would ban Nitro down a
+            // straight that happens to end in one.
+            float curvature = MaxCurvatureAhead(line, distance, _config.NitroStraightLookahead);
+            return curvature <= _config.NitroStraightCurvature;
         }
 
         /// <summary>
@@ -104,17 +129,17 @@ namespace Unbounded.AI
             return Mathf.Min(_config.Pace + boost, CatchUpCeiling);
         }
 
-        private float TargetSpeed(IRacingLine line, float distance, float speed, float pace)
+        private float TargetSpeed(float pace, float curvature, bool useNitro)
         {
-            float topSpeed = Mathf.Max(_config.MinCornerSpeed, _config.TopSpeed * pace);
-            float cornerSpeed = CornerSpeed(line, distance, speed, pace);
+            float ceiling = useNitro ? _config.NitroTopSpeed : _config.TopSpeed;
+            float topSpeed = Mathf.Max(_config.MinCornerSpeed, ceiling * pace);
+            float cornerSpeed = CornerSpeed(curvature, pace);
             return Mathf.Clamp(Mathf.Min(topSpeed, cornerSpeed), _config.MinCornerSpeed, topSpeed);
         }
 
-        private float CornerSpeed(IRacingLine line, float distance, float speed, float pace)
+        private float CornerSpeed(float curvature, float pace)
         {
             float budget = _config.LateralAccelerationBudget * pace * pace;
-            float curvature = MaxCurvatureAhead(line, distance, speed);
 
             if (curvature <= 0.0001f)
             {
@@ -124,10 +149,10 @@ namespace Unbounded.AI
             return Mathf.Sqrt(budget / curvature);
         }
 
-        private float MaxCurvatureAhead(IRacingLine line, float distance, float speed)
+        private float MaxCurvatureAhead(IRacingLine line, float distance, float scanDistance)
         {
             float probe = Mathf.Max(1f, _config.CurvatureProbe);
-            float scan = Mathf.Clamp(speed * _config.BrakingSeconds, probe, probe * 16f);
+            float scan = Mathf.Clamp(scanDistance, probe, probe * 16f);
             float worst = 0f;
 
             for (float ahead = 0f; ahead <= scan; ahead += probe)

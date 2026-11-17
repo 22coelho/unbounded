@@ -70,6 +70,7 @@ namespace Unbounded.App
             Time.timeScale = 1f;
 
             _lapProgress?.RestartLap();
+            _input?.Car?.ResetNitro();
             ReturnOpponentsToTheGrid();
             ApplyControls(false);
 

@@ -15,6 +15,10 @@ namespace Unbounded.UI
     /// </summary>
     public sealed class RaceHud : MonoBehaviour
     {
+        private static readonly Color NitroReadyColor = new Color(0.28f, 0.82f, 1f);
+        private static readonly Color NitroBoostColor = new Color(1f, 0.63f, 0.1f);
+        private static readonly Color NitroEmptyColor = new Color(0.9f, 0.18f, 0.14f);
+
         [SerializeField] private Text _lapText;
         [SerializeField] private Text _positionText;
         [SerializeField] private Text _wrongWayText;
@@ -24,14 +28,20 @@ namespace Unbounded.UI
         [SerializeField] private Text _finishSummaryText;
         [SerializeField] private GameObject _pauseScreen;
         [SerializeField] private MonoBehaviour _readoutSource;
+        [SerializeField] private RectTransform _nitroFill;
+        [SerializeField] private Image _nitroFillImage;
+        [SerializeField] private Text _nitroLabel;
+        [SerializeField] private MonoBehaviour _nitroSource;
 
         private IRaceReadout _readout;
+        private INitroReadout _nitro;
         private int _shownLap = -1;
         private int _shownTotal = -1;
         private int _shownPosition = -1;
         private int _shownField = -1;
         private int _shownWrongWay = -1;
         private int _shownTime = -1;
+        private int _shownNitro = -1;
         private string _shownCountdown;
         private bool _finishShown;
 
@@ -42,6 +52,19 @@ namespace Unbounded.UI
             _positionText = positionText;
             _wrongWayText = wrongWayText;
             Refresh();
+        }
+
+        /// <summary>Wires the Nitro meter when the scene is built from the editor.</summary>
+        public void ConfigureNitro(
+            RectTransform fill, Image fillImage, Text label, MonoBehaviour nitroSource)
+        {
+            _nitroFill = fill;
+            _nitroFillImage = fillImage;
+            _nitroLabel = label;
+            _nitroSource = nitroSource;
+            _nitro = nitroSource as INitroReadout;
+            _shownNitro = -1;
+            RefreshNitro();
         }
 
         /// <summary>Wires the Race flow labels and overlays when the scene is built from the editor.</summary>
@@ -206,6 +229,7 @@ namespace Unbounded.UI
         private void Awake()
         {
             _readout = _readoutSource as IRaceReadout;
+            _nitro = _nitroSource as INitroReadout;
             if (_readout == null)
             {
                 Debug.LogWarning("The HUD has no race readout to display.", this);
@@ -239,6 +263,46 @@ namespace Unbounded.UI
             {
                 _shownWrongWay = wrongWay;
                 _wrongWayText.gameObject.SetActive(wrongWay == 1);
+            }
+
+            RefreshNitro();
+        }
+
+        /// <summary>
+        /// Draws the Nitro charge as a bar that drains and recharges, with a
+        /// colour and label for the three states a player has to tell apart:
+        /// ready, spending, and locked out after running dry.
+        /// </summary>
+        private void RefreshNitro()
+        {
+            if (_nitro == null || _nitroFill == null)
+            {
+                return;
+            }
+
+            float charge = Mathf.Clamp01(_nitro.NitroCharge);
+            int thousandths = Mathf.RoundToInt(charge * 1000f);
+            if (thousandths != _shownNitro)
+            {
+                _shownNitro = thousandths;
+                _nitroFill.anchorMax = new Vector2(charge, 1f);
+            }
+
+            bool boosting = _nitro.IsBoosting;
+            bool lockedOut = _nitro.IsNitroLockedOut;
+
+            Color color = lockedOut ? NitroEmptyColor : (boosting ? NitroBoostColor : NitroReadyColor);
+            if (_nitroFillImage != null)
+            {
+                _nitroFillImage.color = color;
+            }
+
+            if (_nitroLabel != null)
+            {
+                _nitroLabel.color = color;
+                _nitroLabel.text = lockedOut
+                    ? "NITRO EMPTY"
+                    : (boosting ? "NITRO BOOST" : (charge >= 0.999f ? "NITRO READY" : "NITRO"));
             }
         }
 

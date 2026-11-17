@@ -20,5 +20,11 @@ namespace Unbounded.AI
 
         /// <summary>How far the player is ahead of this car along the Track; negative when behind.</summary>
         public float PlayerProgressAhead;
+
+        /// <summary>Nitro left in the car's tank, from 0 to 1.</summary>
+        public float NitroCharge;
+
+        /// <summary>Whether the car's Nitro is locked out after running dry.</summary>
+        public bool NitroLockedOut;
     }
 }
