@@ -7,6 +7,7 @@
         "Unbounded.Track",
         "Unbounded.AI",
         "Unbounded.Race",
+        "Unbounded.App",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

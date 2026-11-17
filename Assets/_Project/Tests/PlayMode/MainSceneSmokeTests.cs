@@ -1192,6 +1192,162 @@ namespace Unbounded.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator EveryCarCarriesDiegeticAudioWithDistanceHandling()
+        {
+            yield return LoadMainScene(keepOpponents: true);
+
+            CarAudio[] cars = Object.FindObjectsByType<CarAudio>();
+            Assert.That(cars.Length, Is.EqualTo(RaceGrid.OpponentCount + 1),
+                "The player and every opponent must carry audio.");
+
+            int players = 0;
+            int opponents = 0;
+
+            foreach (CarAudio car in cars)
+            {
+                Assert.That(car.EngineSource, Is.Not.Null, car.name + " has no engine source.");
+                Assert.That(car.TyreSource, Is.Not.Null, car.name + " has no tyre source.");
+                Assert.That(car.ImpactSource, Is.Not.Null, car.name + " has no impact source.");
+                Assert.That(car.EngineSource.clip, Is.Not.Null, car.name + " has no engine clip.");
+                Assert.That(car.TyreSource.clip, Is.Not.Null, car.name + " has no tyre clip.");
+                Assert.That(car.ImpactSource.clip, Is.Not.Null, car.name + " has no impact clip.");
+                Assert.That(car.EngineSource.loop, Is.True);
+                Assert.That(car.TyreSource.loop, Is.True);
+                Assert.That(car.ImpactSource.loop, Is.False, "Impacts must be one-shots.");
+
+                if (car.IsPlayer)
+                {
+                    players++;
+                    Assert.That(car.EngineSource.spatialBlend, Is.Zero,
+                        "The player's own engine must not fade with the chase camera.");
+                }
+                else
+                {
+                    opponents++;
+                    Assert.That(car.EngineSource.spatialBlend, Is.EqualTo(1f),
+                        "Opponents must be positional, so distance attenuates them.");
+                    Assert.That(car.EngineSource.maxDistance, Is.LessThanOrEqualTo(80f),
+                        "Opponents should stop being heard well before the far side of the circuit.");
+                    Assert.That(car.EngineSource.gameObject.GetComponent<AudioLowPassFilter>(), Is.Not.Null,
+                        "A distant opponent needs the muffling filter.");
+                }
+            }
+
+            Assert.That(players, Is.EqualTo(1));
+            Assert.That(opponents, Is.EqualTo(RaceGrid.OpponentCount));
+        }
+
+        [UnityTest]
+        public IEnumerator EnginePitchFollowsTheCarsSpeedAndSettlesBackToIdle()
+        {
+            yield return LoadMainScene();
+
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            LapProgressTracker tracker = Object.FindAnyObjectByType<LapProgressTracker>();
+            Assert.That(car, Is.Not.Null);
+            Assert.That(tracker, Is.Not.Null);
+            DisablePlayerInput();
+
+            CarAudio audio = car.GetComponent<CarAudio>();
+            Assert.That(audio, Is.Not.Null, "The player car must be audible.");
+
+            yield return new WaitForFixedUpdate();
+            float idlePitch = audio.EnginePitch;
+            float idleVolume = audio.EngineVolume;
+
+            car.SetInput(new HandlingInput { Throttle = 1f });
+            for (int i = 0; i < 90; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            float drivingPitch = audio.EnginePitch;
+            Assert.That(drivingPitch, Is.GreaterThan(idlePitch + 0.3f),
+                "Engine pitch must rise with speed and throttle.");
+            Assert.That(audio.EngineVolume, Is.GreaterThan(idleVolume),
+                "The engine must get louder under load.");
+
+            car.SetInput(default);
+            tracker.ResetCar();
+            for (int i = 0; i < 90; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(audio.EnginePitch, Is.LessThan(drivingPitch - 0.3f),
+                "Engine pitch must fall back as the car comes to rest, without a hard cut.");
+        }
+
+        [UnityTest]
+        public IEnumerator TyreScreechFollowsLateralSlipAndStopsWhenGripReturns()
+        {
+            yield return LoadMainScene();
+
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(car, Is.Not.Null);
+            DisablePlayerInput();
+
+            CarAudio audio = car.GetComponent<CarAudio>();
+            Rigidbody body = car.GetComponent<Rigidbody>();
+            Assert.That(audio, Is.Not.Null);
+
+            // Keep feeding the body a sideways component, as a drift would.
+            for (int i = 0; i < 10; i++)
+            {
+                body.linearVelocity = body.rotation * new Vector3(7f, 0f, 22f);
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(audio.TyreVolume, Is.GreaterThan(0.2f),
+                "A sliding car must be audible.");
+            Assert.That(audio.TyreSource.isPlaying, Is.True);
+
+            for (int i = 0; i < 80; i++)
+            {
+                body.linearVelocity = body.rotation * Vector3.forward * 22f;
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(audio.TyreVolume, Is.LessThan(0.01f),
+                "The screech must stop once the tyres grip again.");
+            Assert.That(audio.TyreSource.isPlaying, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator AHeavyCollisionPlaysAnImpactScaledBySpeed()
+        {
+            yield return LoadMainScene();
+
+            TrackRoot track = FindTrack();
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(car, Is.Not.Null);
+            DisablePlayerInput();
+
+            CarAudio audio = car.GetComponent<CarAudio>();
+            Assert.That(audio, Is.Not.Null);
+
+            // Park on the road facing the right-hand Barrier, then drive into
+            // it hard. A gentle touch has to stay silent; this one must not.
+            Pose pose = track.SamplePose(60f);
+            Vector3 right = pose.rotation * Vector3.right;
+            Rigidbody body = car.GetComponent<Rigidbody>();
+            Teleport(body,
+                pose.position + right * 5f + Vector3.up * 0.1f,
+                Quaternion.LookRotation(right, Vector3.up));
+            body.linearVelocity = right * 20f;
+
+            for (int i = 0; i < 40; i++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(audio.LastImpactSpeed, Is.GreaterThan(8f),
+                "Hitting the Barrier at speed must register a heavy impact.");
+            Assert.That(audio.ImpactSource.volume, Is.GreaterThan(0.5f),
+                "The impact one-shot must be able to reach the mix.");
+        }
+
         /// <summary>
         /// A simple centreline follower: steam toward a point ahead, and slow
         /// down for whatever the road does beyond it. It is dumb, but a lap it

@@ -68,9 +68,11 @@ namespace Unbounded.App
             _lastPhase = _race.Phase;
             _finishOrder = null;
             Time.timeScale = 1f;
+            AudioListener.pause = false;
 
             _lapProgress?.RestartLap();
             _input?.Car?.ResetNitro();
+            ResetCarAudio();
             ReturnOpponentsToTheGrid();
             ApplyControls(false);
 
@@ -81,6 +83,8 @@ namespace Unbounded.App
 
         private void Awake()
         {
+            AudioListener.pause = false;
+
             if (_lapProgress == null)
             {
                 _lapProgress = FindAnyObjectByType<LapProgressTracker>();
@@ -136,6 +140,7 @@ namespace Unbounded.App
             {
                 _paused = false;
                 Time.timeScale = 1f;
+                AudioListener.pause = false;
             }
         }
 
@@ -207,6 +212,7 @@ namespace Unbounded.App
 
             _paused = paused;
             Time.timeScale = paused ? 0f : 1f;
+            AudioListener.pause = paused;
 
             ApplyControls(!paused && _race.Phase == RacePhase.Racing);
 
@@ -217,6 +223,7 @@ namespace Unbounded.App
         {
             Time.timeScale = 1f;
             _paused = false;
+            AudioListener.pause = false;
 
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
@@ -330,6 +337,28 @@ namespace Unbounded.App
                 if (opponent != null)
                 {
                     opponent.ReturnToGrid();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Drops every car back to its idle engine note, so a restart does not
+        /// carry the previous Lap's pitch into the Countdown.
+        /// </summary>
+        private void ResetCarAudio()
+        {
+            _input?.Car?.GetComponent<CarAudio>()?.ResetSound();
+
+            if (_opponents == null)
+            {
+                return;
+            }
+
+            foreach (AiDriver opponent in _opponents)
+            {
+                if (opponent?.Car != null)
+                {
+                    opponent.Car.GetComponent<CarAudio>()?.ResetSound();
                 }
             }
         }

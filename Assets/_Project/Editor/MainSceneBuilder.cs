@@ -225,6 +225,7 @@ namespace Unbounded.Editor
                 out CarController controller);
             car.tag = "Player";
             AddNitroEffect(car, nitroMaterial, isPlayer: true);
+            AddCarAudio(car, isPlayer: true);
 
             var lapProgress = car.AddComponent<LapProgressTracker>();
             lapProgress.Configure(track, car.GetComponent<Rigidbody>());
@@ -268,6 +269,7 @@ namespace Unbounded.Editor
                     out CarController controller);
 
                 AddNitroEffect(car, nitroMaterial, isPlayer: false);
+                AddCarAudio(car, isPlayer: false);
 
                 AiConfig config = AiConfig.Default;
                 config.Pace = 0.93f + slot * 0.015f;
@@ -372,6 +374,77 @@ namespace Unbounded.Editor
 
             var effect = car.AddComponent<NitroBoostEffect>();
             effect.Configure(car.GetComponent<CarController>(), flames, glow, audio);
+        }
+
+        /// <summary>
+        /// Gives a car its engine, tyre, and impact sources. The player's own
+        /// car is centred; opponents are fully spatialised with a low-pass
+        /// filter that closes as they get further from the listener, so five
+        /// engines around the Track stay a field rather than a wall of noise.
+        /// </summary>
+        private static void AddCarAudio(GameObject car, bool isPlayer)
+        {
+            AudioSource engine = CreateCarAudioSource(
+                car.transform,
+                "Engine Audio",
+                loop: true,
+                spatialBlend: isPlayer ? 0f : 1f,
+                priority: isPlayer ? 0 : 160,
+                out AudioLowPassFilter engineFilter);
+            AudioSource tyre = CreateCarAudioSource(
+                car.transform,
+                "Tyre Audio",
+                loop: true,
+                spatialBlend: isPlayer ? 0f : 1f,
+                priority: isPlayer ? 32 : 180,
+                out AudioLowPassFilter tyreFilter);
+            AudioSource impact = CreateCarAudioSource(
+                car.transform,
+                "Impact Audio",
+                loop: false,
+                spatialBlend: isPlayer ? 0.35f : 1f,
+                priority: isPlayer ? 16 : 170,
+                out AudioLowPassFilter impactFilter);
+
+            var audio = car.AddComponent<CarAudio>();
+            audio.Configure(
+                car.GetComponent<CarController>(),
+                car.GetComponent<Rigidbody>(),
+                engine,
+                tyre,
+                impact,
+                new[] { engineFilter, tyreFilter, impactFilter },
+                isPlayer);
+            EditorUtility.SetDirty(audio);
+        }
+
+        private static AudioSource CreateCarAudioSource(
+            Transform parent,
+            string name,
+            bool loop,
+            float spatialBlend,
+            int priority,
+            out AudioLowPassFilter distanceFilter)
+        {
+            var audioObject = new GameObject(name);
+            audioObject.transform.SetParent(parent, false);
+            audioObject.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+
+            var source = audioObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.loop = loop;
+            source.spatialBlend = spatialBlend;
+            source.rolloffMode = AudioRolloffMode.Logarithmic;
+            source.minDistance = 3f;
+            source.maxDistance = 60f;
+            source.dopplerLevel = 0f;
+            source.priority = priority;
+            source.volume = loop ? 0f : 1f;
+
+            distanceFilter = audioObject.AddComponent<AudioLowPassFilter>();
+            distanceFilter.cutoffFrequency = 22000f;
+
+            return source;
         }
 
         private static void CreateChaseCamera(Transform target)

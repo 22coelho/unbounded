@@ -13,7 +13,9 @@ wrong-way warning, a chase camera, the Race loop — Countdown, race timer, paus
 three-Lap finish, live position and final standings, and restart without a
 scene reload — a field of five AI opponents racing the derived Racing line, and
 Nitro with a draining, recharging HUD meter and the same lockout for player and
-AI are in place.
+AI are in place. Every car is audible: engine pitch follows speed and throttle,
+tyre screech follows lateral slip, and collisions play an impact scaled by
+closing speed, with 3D attenuation and a distance filter on the field.
 
 ## Requirements
 
@@ -29,7 +31,7 @@ entry scene and the only one in build settings.
 ```
 Assets/_Project/
 ├── Art/          imported kits, materials
-├── Audio/        engine, tyre, impact, menu loops
+├── Audio/        reserved for imported clips; current sounds are synthesised
 ├── Editor/       project tooling (not shipped)
 ├── Prefabs/
 ├── Scenes/       Main.unity

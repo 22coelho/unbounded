@@ -31,6 +31,9 @@ namespace Unbounded.App
         /// <summary>Whether driving input reaches the car; off during the Countdown and after the finish.</summary>
         public bool ControlsEnabled { get; set; }
 
+        /// <summary>The car this driver feeds.</summary>
+        public CarController Car => _car;
+
         /// <summary>Metres covered along the Track this Race, signed from the start/finish line.</summary>
         public float Progress => _progress;
 
