@@ -621,7 +621,9 @@ namespace Unbounded.Editor
         /// <summary>
         /// The Kit's race car, scaled to the collider and laid on the Track.
         /// The body material follows the car's livery; the Kit's trim, glass,
-        /// and tyres stay shared.
+        /// and tyres stay shared. The Kit models its cars nose-down its own
+        /// -Z while the car root drives along +Z, so the visual is yawed to
+        /// face the way the car travels.
         /// </summary>
         private static void AddCarVisual(GameObject car, KitPalette palette, Material paint)
         {
@@ -631,7 +633,7 @@ namespace Unbounded.Editor
                 palette,
                 car.transform,
                 Vector3.zero,
-                Quaternion.identity,
+                Quaternion.Euler(0f, 180f, 0f),
                 Vector3.one,
                 paint);
 
