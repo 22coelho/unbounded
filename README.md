@@ -34,8 +34,15 @@ The definition-of-done builds are written to:
 | Windows (64-bit) | `Builds/Windows/Unbounded.exe` |
 
 Neither needs Unity installed. Launch the app or executable and the race starts
-immediately. `Builds/` is ignored by git, so the binaries are produced with the
-commands in [Building the players](#building-the-players) rather than committed.
+immediately. The built players are published on the
+[v0.1.0 release](https://github.com/22coelho/unbounded/releases/tag/v0.1.0) as
+`Unbounded-0.1.0-macOS-arm64.zip` and `Unbounded-0.1.0-Windows-x86_64.zip`.
+`Builds/` is ignored by git, so local binaries are produced with the commands in
+[Building the players](#building-the-players) rather than committed.
+
+The macOS bundle is ad-hoc signed and not notarised, so Gatekeeper refuses the
+first launch. Right-click the app and choose **Open**, or clear the quarantine
+flag once with `xattr -dr com.apple.quarantine Unbounded.app`.
 
 ### In the editor
 
