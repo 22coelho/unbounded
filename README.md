@@ -35,8 +35,8 @@ The definition-of-done builds are written to:
 
 Neither needs Unity installed. Launch the app or executable and the race starts
 immediately. The built players are published on the
-[v0.1.0 release](https://github.com/22coelho/unbounded/releases/tag/v0.1.0) as
-`Unbounded-0.1.0-macOS-arm64.zip` and `Unbounded-0.1.0-Windows-x86_64.zip`.
+[v0.1.1 release](https://github.com/22coelho/unbounded/releases/tag/v0.1.1) as
+`Unbounded-0.1.1-macOS-arm64.zip` and `Unbounded-0.1.1-Windows-x86_64.zip`.
 `Builds/` is ignored by git, so local binaries are produced with the commands in
 [Building the players](#building-the-players) rather than committed.
 
