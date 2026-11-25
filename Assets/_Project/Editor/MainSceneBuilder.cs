@@ -979,9 +979,11 @@ namespace Unbounded.Editor
                 cameraObject.AddComponent<AudioListener>();
                 CinemachineBrain brain = cameraObject.AddComponent<CinemachineBrain>();
 
-                // The car is a Rigidbody, so sample the camera on the physics clock:
-                // it keeps the rig glued to the car no matter the render rate.
-                brain.UpdateMethod = CinemachineBrain.UpdateMethods.FixedUpdate;
+                // The car is a Rigidbody with interpolation on, so its transform
+                // moves on the render clock. Sample the follow rig on that same
+                // clock: a fixed-rate camera would stand still between physics
+                // ticks and make the car slide in frame and then snap.
+                brain.UpdateMethod = CinemachineBrain.UpdateMethods.SmartUpdate;
             }
 
             camera.fieldOfView = 62f;

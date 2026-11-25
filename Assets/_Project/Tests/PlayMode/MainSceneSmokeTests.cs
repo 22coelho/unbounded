@@ -8,6 +8,7 @@ using Unbounded.Race;
 using Unbounded.Track;
 using Unbounded.UI;
 using Unbounded.Vehicle;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -364,6 +365,33 @@ namespace Unbounded.Tests.PlayMode
             }
 
             Assert.That(errors, Is.Empty, "The scene logged errors: " + string.Join(" | ", errors.Take(5)));
+        }
+
+        /// <summary>
+        /// The car is interpolated on the render clock, so the camera must
+        /// sample it on that clock too. A fixed-rate camera stands still between
+        /// physics ticks while the car keeps moving, which reads as a stutter:
+        /// the car slides in frame and then snaps back.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ChaseCameraUpdatesOnTheRenderClock()
+        {
+            yield return LoadMainScene(keepOpponents: true);
+
+            CinemachineBrain brain = Object.FindAnyObjectByType<CinemachineBrain>();
+            Assert.That(brain, Is.Not.Null, "The Main scene must contain a CinemachineBrain.");
+            Assert.That(brain.UpdateMethod, Is.Not.EqualTo(CinemachineBrain.UpdateMethods.FixedUpdate),
+                "The chase camera must not update on the physics clock.");
+
+            CarController[] cars = Object.FindObjectsByType<CarController>();
+            Assert.That(cars, Is.Not.Empty, "The Main scene must contain cars.");
+            foreach (CarController car in cars)
+            {
+                Rigidbody body = car.GetComponent<Rigidbody>();
+                Assert.That(body, Is.Not.Null, car.name + " must have a Rigidbody.");
+                Assert.That(body.interpolation, Is.EqualTo(RigidbodyInterpolation.Interpolate),
+                    car.name + " must interpolate, so its visual moves every rendered frame.");
+            }
         }
 
         [UnityTest]

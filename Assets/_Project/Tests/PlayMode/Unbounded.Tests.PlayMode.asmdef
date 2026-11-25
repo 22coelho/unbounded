@@ -9,6 +9,7 @@
         "Unbounded.AI",
         "Unbounded.UI",
         "Unbounded.Race",
+        "Unity.Cinemachine",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UnityEngine.UI"
