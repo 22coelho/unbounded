@@ -49,6 +49,7 @@ namespace Unbounded.Editor
             ArtPalette.EnsureFolders();
             ArtPalette.EnsureFolder(PhysicsFolder);
             ArtPalette.EnsureFolder(MeshFolder);
+            ArtPalette.PrepareImports();
             KitAssets.PrepareImports();
 
             Materials materials = CreateMaterials();
@@ -72,7 +73,6 @@ namespace Unbounded.Editor
 
             GameObject car = CreatePlayerCar(
                 materials,
-                palette,
                 actions,
                 frictionless,
                 track);
@@ -83,7 +83,6 @@ namespace Unbounded.Editor
             RaceHud hud = CreateHud(lapProgress, car.GetComponent<CarController>());
             AiDriver[] opponents = CreateOpponents(
                 materials,
-                palette,
                 frictionless,
                 track,
                 lapProgress);
@@ -122,10 +121,8 @@ namespace Unbounded.Editor
 
         private static Materials CreateMaterials()
         {
-            Texture2D asphaltNoise = ArtPalette.Noise(
-                "Asphalt", ArtPalette.Srgb(0x32, 0x38, 0x40), ArtPalette.Srgb(0x46, 0x4C, 0x55), 26f);
-            Texture2D grassNoise = ArtPalette.Noise(
-                "Grass", ArtPalette.Srgb(0x4C, 0x6B, 0x36), ArtPalette.Srgb(0x63, 0x84, 0x42), 14f);
+            Texture2D asphalt = LoadSurface("Asphalt");
+            Texture2D grass = LoadSurface("Grass");
             Texture2D kerbStripes = ArtPalette.Stripes(
                 "Kerb", ArtPalette.Srgb(0xD9, 0x35, 0x28), ArtPalette.Srgb(0xF2, 0xEE, 0xE2), 8);
             Texture2D barrierStripes = ArtPalette.Stripes(
@@ -134,14 +131,27 @@ namespace Unbounded.Editor
 
             var materials = new Materials
             {
-                Asphalt = ArtPalette.Lit("Asphalt", ArtPalette.Asphalt, 0.18f, map: asphaltNoise, tiling: Vector2.one),
+                // road01 carries painted edge lines down its left and right
+                // columns. The Track's UVs run length along U, so those lines
+                // would stripe across the Road every 8 m; sampling the middle
+                // 90% of U drops them and lets the generated edge lines rule.
+                // The base colour also lifts the imported asphalt, which is a
+                // daylight texture and reads almost black under a 16 degree sun.
+                Asphalt = Lift(
+                    ArtPalette.Lit("Asphalt", Color.white, 0.18f, map: asphalt,
+                        tiling: new Vector2(0.9f, 1f), offset: new Vector2(0.05f, 0f),
+                        shaderName: ArtPalette.SimpleLitShader),
+                    1.45f),
                 Kerb = ArtPalette.Lit("Kerb", Color.white, 0.22f, map: kerbStripes),
                 Barrier = ArtPalette.Lit("Barrier", Color.white, 0.2f, map: barrierStripes),
                 StartLine = ArtPalette.Lit("StartLine", Color.white, 0.25f, map: startLineCheckers,
                     tiling: new Vector2(1f / (TrackShape.Default.HalfWidth * 2f), 1f / 1.5f)),
                 EdgeLine = ArtPalette.Lit("EdgeLine", ArtPalette.EdgeWhite, 0.3f),
-                Grass = ArtPalette.Lit("Grass", ArtPalette.Grass, 0.06f, map: grassNoise,
-                    tiling: new Vector2(GroundSize / 12f, GroundSize / 12f)),
+                Grass = Lift(
+                    ArtPalette.Lit("Grass", Color.white, 0.06f, map: grass,
+                        tiling: new Vector2(GroundSize / 8f, GroundSize / 8f),
+                        shaderName: ArtPalette.SimpleLitShader),
+                    1.25f),
                 Tyre = ArtPalette.Lit("CarTyre", ArtPalette.Tyre, 0.12f),
                 Trim = ArtPalette.Lit("CarTrim", ArtPalette.KitWhite, 0.45f, 0.1f),
                 Glass = ArtPalette.Lit("CarGlass", ArtPalette.KitGlass, 0.9f, 0.35f),
@@ -157,6 +167,31 @@ namespace Unbounded.Editor
             }
 
             return materials;
+        }
+
+        private static Texture2D LoadSurface(string name)
+        {
+            string path = Path.Combine(ArtPalette.TexturesFolder, name + ".png");
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null)
+            {
+                throw new IOException("Missing imported surface at " + path);
+            }
+
+            return texture;
+        }
+
+        /// <summary>
+        /// Scales a surface material's base colour. The colour is allowed to go
+        /// above one: URP multiplies it into the sampled map, which is how the
+        /// imported daylight textures are brought back into a sunset's range
+        /// without editing the textures themselves.
+        /// </summary>
+        private static Material Lift(Material material, float scale)
+        {
+            material.SetColor("_BaseColor", new Color(scale, scale, scale, 1f));
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         /// <summary>
@@ -196,11 +231,17 @@ namespace Unbounded.Editor
         private static void CreateLighting()
         {
             var lightObject = new GameObject("Sun");
-            lightObject.transform.rotation = Quaternion.Euler(9f, -24f, 0f);
+            // The imported panorama paints its sun about 16 degrees above the
+            // horizon, so the light is pitched to match rather than left at the
+            // old 9 degree placeholder.
+            lightObject.transform.rotation = Quaternion.Euler(16f, -24f, 0f);
             var sun = lightObject.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = ArtPalette.Sun;
-            sun.intensity = 2.4f;
+            // A 16 degree sun grazes the Track, so its contribution to a flat
+            // road is only sin(16) of the intensity. The light is raised to
+            // compensate or the road reads as a black hole under the fog.
+            sun.intensity = 3.4f;
             sun.shadows = LightShadows.Soft;
             sun.shadowStrength = 0.88f;
             sun.shadowBias = 0.04f;
@@ -219,7 +260,18 @@ namespace Unbounded.Editor
             Vector3 sunDirection = -(lightObject.transform.rotation * Vector3.forward);
             RenderSettings.skybox = ArtPalette.Sky(sunDirection);
             RenderSettings.sun = sun;
-            RenderSettings.ambientMode = AmbientMode.Skybox;
+
+            // Skybox ambient lives in a probe that only the editor computes, so
+            // a built player fell back to black and the Road and Grass went
+            // unlit. A trilight ambient sampled from the same panorama is
+            // serialized with the scene and survives the build.
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            // Trilight ignores RenderSettings.ambientIntensity, so the sampled
+            // panorama colours are lifted toward white instead: the imported
+            // sky's lower half is nearly black and the ground read as unlit.
+            RenderSettings.ambientSkyColor = Color.Lerp(ArtPalette.AmbientSky, Color.white, 0.35f);
+            RenderSettings.ambientEquatorColor = Color.Lerp(ArtPalette.AmbientHorizon, Color.white, 0.3f);
+            RenderSettings.ambientGroundColor = Color.Lerp(ArtPalette.AmbientGround, Color.white, 0.25f);
             RenderSettings.ambientIntensity = 1.3f;
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
             RenderSettings.reflectionIntensity = 1f;
@@ -247,7 +299,11 @@ namespace Unbounded.Editor
 
             Mesh mesh = CreateGroundMesh();
             ground.AddComponent<MeshFilter>().sharedMesh = mesh;
-            ground.AddComponent<MeshRenderer>().sharedMaterial = material;
+            MeshRenderer renderer = ground.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            // A 700 m plane at runtime shadow distance only shadows itself, and
+            // the acne it produces darkens the grass it is drawn on.
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
 
             var collider = ground.AddComponent<MeshCollider>();
             collider.sharedMesh = mesh;
@@ -509,7 +565,6 @@ namespace Unbounded.Editor
 
         private static GameObject CreatePlayerCar(
             Materials materials,
-            KitPalette palette,
             InputActionAsset actions,
             PhysicsMaterial physicMaterial,
             TrackRoot track)
@@ -517,8 +572,8 @@ namespace Unbounded.Editor
             GameObject car = CreateCar(
                 "Player Car",
                 track.SamplePose(LapProgressTracker.StartDistance),
-                palette,
                 materials.PlayerPaint,
+                ImportedCars.Ferrari,
                 physicMaterial,
                 track,
                 out CarController controller);
@@ -543,7 +598,6 @@ namespace Unbounded.Editor
         /// </summary>
         private static AiDriver[] CreateOpponents(
             Materials materials,
-            KitPalette palette,
             PhysicsMaterial physicMaterial,
             TrackRoot track,
             LapProgressTracker player)
@@ -555,11 +609,13 @@ namespace Unbounded.Editor
                 float distance = RaceGrid.DistanceFor(slot);
                 float lateral = RaceGrid.LateralFor(slot);
 
+                // The imported bodies alternate so the field never forms one
+                // block of identical silhouettes: R35, C63, R35, C63, R35.
                 GameObject car = CreateCar(
                     "Opponent " + (slot + 1),
                     track.SamplePose(distance, lateral),
-                    palette,
                     materials.OpponentPaint[slot],
+                    slot % 2 == 0 ? ImportedCars.R35 : ImportedCars.C63,
                     physicMaterial,
                     track,
                     out CarController controller);
@@ -583,8 +639,8 @@ namespace Unbounded.Editor
         private static GameObject CreateCar(
             string name,
             Pose spawn,
-            KitPalette palette,
             Material paint,
+            ImportedCars.CarBody carBody,
             PhysicsMaterial physicMaterial,
             TrackRoot track,
             out CarController controller)
@@ -613,29 +669,19 @@ namespace Unbounded.Editor
             var surface = car.AddComponent<CarSurfaceAdapter>();
             surface.Configure(track);
 
-            AddCarVisual(car, palette, paint);
+            AddCarVisual(car, carBody, paint);
 
             return car;
         }
 
         /// <summary>
-        /// The Kit's race car, scaled to the collider and laid on the Track.
-        /// The body material follows the car's livery; the Kit's trim, glass,
-        /// and tyres stay shared. The Kit models its cars nose-down its own
-        /// -Z while the car root drives along +Z, so the visual is yawed to
-        /// face the way the car travels.
+        /// The imported body, scaled to the collider and laid on the Track.
+        /// The body panels follow the car's livery; the imported glass, tyres,
+        /// lights, and trim stay as they came.
         /// </summary>
-        private static void AddCarVisual(GameObject car, KitPalette palette, Material paint)
+        private static void AddCarVisual(GameObject car, ImportedCars.CarBody body, Material paint)
         {
-            GameObject visual = KitAssets.Spawn(
-                KitAssets.Racing,
-                "raceCarRed",
-                palette,
-                car.transform,
-                Vector3.zero,
-                Quaternion.Euler(0f, 180f, 0f),
-                Vector3.one,
-                paint);
+            GameObject visual = ImportedCars.Spawn(body, car.transform, paint);
 
             Bounds bounds = KitAssets.BoundsIn(visual, car.transform);
             float scale = bounds.size.z > 0.001f ? CarVisualLength / bounds.size.z : 1f;

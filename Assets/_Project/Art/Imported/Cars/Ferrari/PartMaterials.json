@@ -1,0 +1,179 @@
+{
+  "source": "github.com/codingedger/car-game@4a9dd6200b95",
+  "entries": [
+    {
+      "name": "badge",
+      "materials": [
+        "head.0",
+        "badge_a",
+        "badge_b"
+      ]
+    },
+    {
+      "name": "badge_ok",
+      "materials": [
+        "badge_a",
+        "badge_b"
+      ]
+    },
+    {
+      "name": "badge_ok.001",
+      "materials": [
+        "head.0"
+      ]
+    },
+    {
+      "name": "badge_ok.002",
+      "materials": [
+        "head.0"
+      ]
+    },
+    {
+      "name": "bonnet_ok",
+      "materials": [
+        "body_c",
+        "primary",
+        "body_a",
+        "badge_b"
+      ]
+    },
+    {
+      "name": "boot_ok",
+      "materials": [
+        "body_b",
+        "body_c",
+        "ferrari testarosa",
+        "primary"
+      ]
+    },
+    {
+      "name": "bunp_front",
+      "materials": [
+        "body_b",
+        "body_c",
+        "primary",
+        "body_a"
+      ]
+    },
+    {
+      "name": "chassis",
+      "materials": [
+        "body_b",
+        "body_c",
+        "ferrari testarosa",
+        "ferrari testarosa",
+        "primary",
+        "body_a"
+      ]
+    },
+    {
+      "name": "cheetah.dff.cheetah_col.ColMesh",
+      "materials": [
+        "Metal - Car",
+        "Glass - Glass"
+      ]
+    },
+    {
+      "name": "door_lf_ok",
+      "materials": [
+        "body_c",
+        "ferrari testarosa",
+        "primary",
+        "ferrari testarosa",
+        "body_d",
+        "glass_a"
+      ]
+    },
+    {
+      "name": "door_rf_ok",
+      "materials": [
+        "body_c",
+        "ferrari testarosa",
+        "primary",
+        "ferrari testarosa",
+        "body_d",
+        "glass_a"
+      ]
+    },
+    {
+      "name": "exh",
+      "materials": [
+        "exh_a",
+        "exh_b"
+      ]
+    },
+    {
+      "name": "head",
+      "materials": [
+        "head.0",
+        "ferrari testarosa",
+        "primary",
+        "ferrari testarosa"
+      ]
+    },
+    {
+      "name": "interior",
+      "materials": [
+        "ferrari testarosa",
+        "body_d"
+      ]
+    },
+    {
+      "name": "rimz",
+      "materials": [
+        "ferrari testarosa",
+        "ferrari testarosa",
+        "wheel_a",
+        "wheel_b"
+      ]
+    },
+    {
+      "name": "rimz.001",
+      "materials": [
+        "ferrari testarosa",
+        "ferrari testarosa",
+        "wheel_a",
+        "wheel_b"
+      ]
+    },
+    {
+      "name": "rimz.002",
+      "materials": [
+        "ferrari testarosa",
+        "ferrari testarosa",
+        "wheel_a",
+        "wheel_b"
+      ]
+    },
+    {
+      "name": "rimz.003",
+      "materials": [
+        "ferrari testarosa",
+        "ferrari testarosa",
+        "wheel_a",
+        "wheel_b"
+      ]
+    },
+    {
+      "name": "seat",
+      "materials": [
+        "ferrari testarosa"
+      ]
+    },
+    {
+      "name": "wheel",
+      "materials": [
+        "wheel.0"
+      ]
+    },
+    {
+      "name": "windscreen_ok",
+      "materials": [
+        "body_c",
+        "glass_a",
+        "glass_b"
+      ]
+    }
+  ],
+  "note": "Wheel objects rimz, rimz.001, rimz.002 share rimz.003's assignment: the source prefab references only one wheel because the others are nested prefab instances."
+}

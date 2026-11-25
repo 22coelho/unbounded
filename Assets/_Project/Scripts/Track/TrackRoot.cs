@@ -125,15 +125,15 @@ namespace Unbounded.Track
                 generated.transform.SetParent(transform, false);
                 _generated = generated.transform;
 
-                AddMesh("Road", TrackMeshBuilder.BuildRoad(Path, _shape), _roadMaterial, true);
-                AddMesh("Kerbs", TrackMeshBuilder.BuildKerbs(Path, _shape), _kerbMaterial, true);
-                AddMesh("Barriers", TrackMeshBuilder.BuildBarriers(Path, _shape), _barrierMaterial, true);
+                AddMesh("Road", TrackMeshBuilder.BuildRoad(Path, _shape), _roadMaterial, true, false);
+                AddMesh("Kerbs", TrackMeshBuilder.BuildKerbs(Path, _shape), _kerbMaterial, true, true);
+                AddMesh("Barriers", TrackMeshBuilder.BuildBarriers(Path, _shape), _barrierMaterial, true, true);
                 if (_edgeLineMaterial != null)
                 {
-                    AddMesh("Edge Lines", TrackMeshBuilder.BuildEdgeLines(Path, _shape), _edgeLineMaterial, false);
+                    AddMesh("Edge Lines", TrackMeshBuilder.BuildEdgeLines(Path, _shape), _edgeLineMaterial, false, false);
                 }
 
-                AddMesh("Start Line", TrackMeshBuilder.BuildStartLine(Path, _shape), _startLineMaterial, false);
+                AddMesh("Start Line", TrackMeshBuilder.BuildStartLine(Path, _shape), _startLineMaterial, false, false);
             }
             finally
             {
@@ -154,7 +154,12 @@ namespace Unbounded.Track
             }
         }
 
-        private void AddMesh(string name, TrackMeshData data, Material material, bool withCollider)
+        /// <summary>
+        /// The Road and the painted lines are flat sheets on the ground: casting
+        /// from them only produces self-shadow acne, so they are added as
+        /// receivers while the Kerbs and Barriers, which have height, still cast.
+        /// </summary>
+        private void AddMesh(string name, TrackMeshData data, Material material, bool withCollider, bool castShadows)
         {
             if (data.IsEmpty || _generated == null)
             {
@@ -173,7 +178,11 @@ namespace Unbounded.Track
             part.transform.SetParent(_generated, false);
 
             part.AddComponent<MeshFilter>().sharedMesh = mesh;
-            part.AddComponent<MeshRenderer>().sharedMaterial = material;
+            MeshRenderer renderer = part.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = castShadows
+                ? UnityEngine.Rendering.ShadowCastingMode.On
+                : UnityEngine.Rendering.ShadowCastingMode.Off;
 
             if (!withCollider)
             {

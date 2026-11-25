@@ -13,8 +13,10 @@ ordered checkpoints, and a validated lap; one drivable arcade car with
 speed-dependent grip, reverse, nitro, reset-to-track, and grass that punishes
 cutting; a field of five AI opponents on a derived racing line; a full race loop
 with countdown, timer, pause, live position, final standings, and restart
-without a scene reload; a diegetic audio mix; and a golden-hour art pass over
-the free Kenney Racing and Nature kits. The pause screen doubles as a settings
+without a scene reload; a diegetic audio mix; and an art pass that dresses the
+field in imported photoreal cars under a photographed sunset sky, with
+surface textures from the same source and the free Kenney kits still dressing
+the circuit. The pause screen doubles as a settings
 menu for master volume and steering sensitivity, and both settings plus the
 player's best lap persist through PlayerPrefs.
 
@@ -222,7 +224,7 @@ It writes a numbered JPEG sequence; encode it to MP4 at 30 fps and place it at
 
 ```
 Assets/_Project/
-├── Art/          imported kits, materials
+├── Art/          imported cars, kits, sky, surfaces, and materials
 ├── Audio/        reserved for imported clips; current sounds are synthesised
 ├── Editor/       project tooling and the build script (not shipped)
 ├── Prefabs/

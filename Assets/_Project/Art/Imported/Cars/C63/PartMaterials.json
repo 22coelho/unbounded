@@ -1,0 +1,398 @@
+{
+  "source": "github.com/codingedger/car-game@4a9dd6200b95",
+  "entries": [
+    {
+      "name": "biturbo",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "black",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "bonnet_ok",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "boot_ok",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "bumer_pered",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "bumer_pered.5",
+        "bumer_pered.6",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "bumer_zad",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "bumer_zad_setka",
+      "materials": [
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "bump_front_ok",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "cabin",
+      "materials": [
+        "chassisbody.0",
+        "C63"
+      ]
+    },
+    {
+      "name": "chassis",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "chassisbody",
+      "materials": [
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "chrome",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "chrome.001",
+      "materials": [
+        "chrome.0"
+      ]
+    },
+    {
+      "name": "door_lf_ok",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "door_lr_ok",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "door_lr_ok.4",
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "door_rf_ok",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "door_lr_ok.4",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "door_rf_ok.9",
+        "C63"
+      ]
+    },
+    {
+      "name": "door_rr_ok",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "door_lr_ok.4",
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "dvorniki",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "elegy.dff.elegy_col.ColMesh",
+      "materials": [
+        "Metal - Car",
+        "Glass - Glass",
+        "Misc"
+      ]
+    },
+    {
+      "name": "kuzov",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "lamp",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "led bl nyalah",
+      "materials": [
+        "headlight_l.5"
+      ]
+    },
+    {
+      "name": "matte_black",
+      "materials": [
+        "headlight_l.0"
+      ]
+    },
+    {
+      "name": "optika_pered",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "optika_pered.3"
+      ]
+    },
+    {
+      "name": "rear_light",
+      "materials": [
+        "headlight_l.3"
+      ]
+    },
+    {
+      "name": "revese",
+      "materials": [
+        "headlight_l.4"
+      ]
+    },
+    {
+      "name": "rul",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.10",
+        "C63",
+        "C63",
+        "torpeda.15",
+        "C63",
+        "seat_pered.8",
+        "rul.9"
+      ]
+    },
+    {
+      "name": "seat_pered",
+      "materials": [
+        "C63",
+        "chassisbody.0",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.10",
+        "torpeda.15",
+        "seat_pered.8"
+      ]
+    },
+    {
+      "name": "seat_zad",
+      "materials": [
+        "C63",
+        "torpeda.10",
+        "torpeda.15",
+        "seat_pered.8",
+        "C63"
+      ]
+    },
+    {
+      "name": "setka",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "shiny_black",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "st_lf_ok",
+      "materials": [
+        "Glass - Glass",
+        "C63"
+      ]
+    },
+    {
+      "name": "st_lr_ok",
+      "materials": [
+        "Glass - Glass"
+      ]
+    },
+    {
+      "name": "st_rf_ok",
+      "materials": [
+        "Glass - Glass",
+        "C63"
+      ]
+    },
+    {
+      "name": "st_rr_ok",
+      "materials": [
+        "Glass - Glass"
+      ]
+    },
+    {
+      "name": "storage",
+      "materials": [
+        "C63",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "torpeda",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "mat_carbon_1",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.10",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.15",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "torpeda.001",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "mat_carbon_1",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.10",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.15",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "torpeda.002",
+      "materials": [
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "mat_carbon_1",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.10",
+        "C63",
+        "C63",
+        "C63",
+        "C63",
+        "torpeda.15",
+        "C63",
+        "C63"
+      ]
+    },
+    {
+      "name": "wheel",
+      "materials": [
+        "mat_carbon_1",
+        "Metal - Car"
+      ]
+    },
+    {
+      "name": "windows_line",
+      "materials": [
+        "C63"
+      ]
+    },
+    {
+      "name": "windscreen_ok",
+      "materials": [
+        "Glass - Glass",
+        "Glass - Glass 1",
+        "Glass - Glass 2"
+      ]
+    }
+  ]
+}

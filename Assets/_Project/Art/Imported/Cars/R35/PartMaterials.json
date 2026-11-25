@@ -1,0 +1,652 @@
+{
+  "source": "github.com/codingedger/car-game@4a9dd6200b95",
+  "entries": [
+    {
+      "name": "Black",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Bonnets0",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "Bonnets1",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "Bonnets2",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "Boot0",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Boot1",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "Boot2",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Boot3",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Cabin_Carbon",
+      "materials": [
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "ChangeA_Cabin",
+      "materials": [
+        "t_cabin_ao"
+      ]
+    },
+    {
+      "name": "ChangeA_Cabin.001",
+      "materials": [
+        "t_cabin_ao"
+      ]
+    },
+    {
+      "name": "ChangeA_Cabin.002",
+      "materials": [
+        "t_cabin_ao"
+      ]
+    },
+    {
+      "name": "ChangeA_Cabin.003",
+      "materials": [
+        "t_cabin_ao"
+      ]
+    },
+    {
+      "name": "ChangeA_Cabin_",
+      "materials": [
+        "t_cabin_a_rme"
+      ]
+    },
+    {
+      "name": "Dashboard.001.001",
+      "materials": [
+        "display",
+        "gauges",
+        "digitalgauge2"
+      ]
+    },
+    {
+      "name": "Diffusor0",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Diffusor1",
+      "materials": [
+        "black"
+      ]
+    },
+    {
+      "name": "Diffusor2",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "Diffusor3",
+      "materials": [
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "Diffusor4",
+      "materials": [
+        "t_tongyong_d",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "Diffusor5",
+      "materials": [
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "Engine0",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_engine_ao",
+        "t_engine_a_d",
+        "colorall"
+      ]
+    },
+    {
+      "name": "Exhaust0",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Exhaust1",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Exhaust2",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Exhaust3",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Exhaust4",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Fablic",
+      "materials": [
+        "fabric"
+      ]
+    },
+    {
+      "name": "FrontBump0",
+      "materials": [
+        "t_light_140201_",
+        "vehiclelights128",
+        "vehiclelights128",
+        "body",
+        "t_tongyong_d",
+        "t_cabin_a_rme",
+        "windows",
+        "black"
+      ]
+    },
+    {
+      "name": "FrontBump1",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "windows",
+        "black",
+        "t_grid3_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "FrontBump2",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "FrontBump3",
+      "materials": [
+        "vehiclelights128",
+        "body",
+        "t_tongyong_d",
+        "windows",
+        "black",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "FrontBump4",
+      "materials": [
+        "vehiclelights128",
+        "vehiclelights128",
+        "body",
+        "t_tongyong_d",
+        "black",
+        "t_logo_140201_d"
+      ]
+    },
+    {
+      "name": "FrontFends0",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "FrontFends1",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "FrontFends2",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "FrontFends3",
+      "materials": [
+        "vehiclelights128",
+        "vehiclelights128",
+        "body",
+        "t_tongyong_d",
+        "black",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "FrontFends4",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "FrontLights0",
+      "materials": [
+        "t_light_140201_",
+        "vehiclelights128",
+        "vehiclelights128"
+      ]
+    },
+    {
+      "name": "FrontSpliters1",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "FrontSpliters2",
+      "materials": [
+        "body",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "FrontSpliters3",
+      "materials": [
+        "t_tongyong_d",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "FrontSpliters4",
+      "materials": [
+        "t_tongyong_d",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "FrontSpliters5",
+      "materials": [
+        "body",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "Leather",
+      "materials": [
+        "leather"
+      ]
+    },
+    {
+      "name": "Leather.001",
+      "materials": [
+        "leather"
+      ]
+    },
+    {
+      "name": "Leather.002",
+      "materials": [
+        "leather"
+      ]
+    },
+    {
+      "name": "Leather.003",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Leather.004",
+      "materials": [
+        "leather"
+      ]
+    },
+    {
+      "name": "Mirror",
+      "materials": [
+        "Mirror.0"
+      ]
+    },
+    {
+      "name": "Object",
+      "materials": [
+        "body"
+      ]
+    },
+    {
+      "name": "RearBump0",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_cabin_a_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearBump1",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearBump2",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearBump3",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "remap_carbon",
+        "t_grid3_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearBump4",
+      "materials": [
+        "body",
+        "t_cabin_ao",
+        "t_tongyong_d",
+        "remap_carbon",
+        "t_grid3_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearBump5",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "remap_carbon",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearBump6",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "remap_carbon",
+        "t_grid3_d",
+        "t_light_140201_e"
+      ]
+    },
+    {
+      "name": "RearFends0",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "RearFends1",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "RearFends2",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "RearFends3",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "black",
+        "t_logo_140201_d"
+      ]
+    },
+    {
+      "name": "RearFends4",
+      "materials": [
+        "vehiclelights128",
+        "vehiclelights128",
+        "body",
+        "t_tongyong_d",
+        "black",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "RearLights0",
+      "materials": [
+        "t_light_140201_ 1",
+        "vehiclelights128",
+        "vehiclelights128",
+        "vehiclelights128",
+        "vehiclelights128"
+      ]
+    },
+    {
+      "name": "RearLights1",
+      "materials": [
+        "t_light_140201_",
+        "vehiclelights128",
+        "vehiclelights128",
+        "vehiclelights128",
+        "vehiclelights128"
+      ]
+    },
+    {
+      "name": "Roof0",
+      "materials": [
+        "body"
+      ]
+    },
+    {
+      "name": "Roof1",
+      "materials": [
+        "black"
+      ]
+    },
+    {
+      "name": "SideSkirts0",
+      "materials": [
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "SideSkirts1",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "black"
+      ]
+    },
+    {
+      "name": "SideSkirts2",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "SideSkirts3",
+      "materials": [
+        "t_tongyong_d",
+        "remap_carbon"
+      ]
+    },
+    {
+      "name": "SideSkirts4",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "t_grid3_d"
+      ]
+    },
+    {
+      "name": "Spoilers0",
+      "materials": [
+        "vehiclelights128",
+        "body",
+        "windows"
+      ]
+    },
+    {
+      "name": "Spoilers1",
+      "materials": [
+        "body",
+        "t_tongyong_d",
+        "black"
+      ]
+    },
+    {
+      "name": "Spoilers2",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Spoilers3",
+      "materials": [
+        "vehiclelights128",
+        "body",
+        "t_tongyong_d",
+        "black",
+        "windows"
+      ]
+    },
+    {
+      "name": "Spoilers4",
+      "materials": [
+        "body",
+        "t_tongyong_d"
+      ]
+    },
+    {
+      "name": "Windows",
+      "materials": [
+        "body",
+        "windows"
+      ]
+    },
+    {
+      "name": "car.dff.car_col.ColMesh",
+      "materials": [
+        "Metal - Car",
+        "Glass - Glass"
+      ]
+    },
+    {
+      "name": "door_lf_ok",
+      "materials": [
+        "vehiclelights128",
+        "body",
+        "leather",
+        "t_tongyong_d",
+        "door_rf_ok.4",
+        "t_cabin_a_d",
+        "windows",
+        "t_cabin_lod_n",
+        "black",
+        "door_lf_ok.9"
+      ]
+    },
+    {
+      "name": "door_rf_ok",
+      "materials": [
+        "vehiclelights128",
+        "body",
+        "leather",
+        "t_tongyong_d",
+        "door_rf_ok.4",
+        "t_cabin_a_d",
+        "windows",
+        "t_cabin_lod_n",
+        "black"
+      ]
+    },
+    {
+      "name": "steeringwheel_ok",
+      "materials": [
+        "steeringwheel_ok.0",
+        "ext_details",
+        "plastic01_black01",
+        "leather02_nero",
+        "symbols",
+        "alu_brushed03",
+        "leather02_nero_stitching",
+        "leatherwhite"
+      ]
+    },
+    {
+      "name": "wheel",
+      "materials": [
+        "r35rr3_rotor",
+        "r35rr3_wheel",
+        "r35rr3_tyre"
+      ]
+    }
+  ]
+}

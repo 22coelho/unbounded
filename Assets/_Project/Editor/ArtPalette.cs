@@ -22,8 +22,6 @@ namespace Unbounded.Editor
 
         // Track. The road is a cool, dark surface so the warm Kerbs and the
         // cars painted in the accents below read against it from a distance.
-        public static readonly Color Asphalt = Linear(0x2C, 0x31, 0x38);
-        public static readonly Color AsphaltLight = Linear(0x3A, 0x40, 0x48);
         public static readonly Color KerbRed = Linear(0xD9, 0x35, 0x28);
         public static readonly Color KerbWhite = Linear(0xF2, 0xEE, 0xE2);
         public static readonly Color BarrierWhite = Linear(0xE8, 0xE3, 0xD6);
@@ -65,10 +63,15 @@ namespace Unbounded.Editor
         public static readonly Color Fill = Linear(0x8F, 0xB6, 0xE0);
         public static readonly Color SkyHorizon = Linear(0xF2, 0xBE, 0x8E);
         public static readonly Color SkyZenith = Linear(0x24, 0x4C, 0x78);
+
+        // Averages of the imported panorama's upper half, horizon band, and
+        // lower half. They drive a trilight ambient so the built player is lit
+        // by the sky it shows instead of a probe that only exists in the editor.
+        public static readonly Color AmbientSky = Linear(0x8F, 0x93, 0xBA);
+        public static readonly Color AmbientHorizon = Linear(0xBC, 0xAA, 0xBE);
+        public static readonly Color AmbientGround = Linear(0x5F, 0x4C, 0x61);
         public static readonly Color Fog = Linear(0xD9, 0xB5, 0x95);
         public static readonly Color NitroFlame = Linear(0xFF, 0x8A, 0x2E);
-
-        private static Material _litShaderProbe;
 
         public static Color Linear(byte r, byte g, byte b) =>
             new Color(r / 255f, g / 255f, b / 255f, 1f).linear;
@@ -84,6 +87,20 @@ namespace Unbounded.Editor
             EnsureFolder(PostFolder);
         }
 
+        /// <summary>
+        /// The physically based shader. It is the palette default, but the flat
+        /// Road and Grass need <see cref="SimpleLitShader"/> instead: in a built
+        /// player their perfectly horizontal normals come out black under this
+        /// shader while every other Lit surface in the frame is correct.
+        /// </summary>
+        public const string LitShader = "Universal Render Pipeline/Lit";
+
+        /// <summary>
+        /// The Blinn-Phong shader. It still takes the sun, its shadows, and the
+        /// trilight ambient, so it is a drop-in for the two flat surfaces.
+        /// </summary>
+        public const string SimpleLitShader = "Universal Render Pipeline/Simple Lit";
+
         /// <summary>A URP Lit material, reused across builds so the scene keeps its references.</summary>
         public static Material Lit(
             string name,
@@ -91,9 +108,16 @@ namespace Unbounded.Editor
             float smoothness,
             float metallic = 0f,
             Texture2D map = null,
-            Vector2 tiling = default)
+            Vector2 tiling = default,
+            Vector2 offset = default,
+            string shaderName = LitShader)
         {
             Material material = LoadOrCreate(name);
+            Shader shader = Shader.Find(shaderName);
+            if (shader != null && material.shader != shader)
+            {
+                material.shader = shader;
+            }
 
             material.color = map != null ? Color.white : color;
             material.SetFloat("_Smoothness", smoothness);
@@ -107,6 +131,7 @@ namespace Unbounded.Editor
             {
                 material.SetTexture("_BaseMap", map);
                 material.SetTextureScale("_BaseMap", tiling == default ? Vector2.one : tiling);
+                material.SetTextureOffset("_BaseMap", offset);
             }
             else
             {
@@ -147,31 +172,62 @@ namespace Unbounded.Editor
             return material;
         }
 
-        public static Texture2D Noise(string name, Color low, Color high, float frequency, int size = 256)
+        /// <summary>
+        /// The Road, Grass, and sky are imported photographs rather than
+        /// generated textures, so their import settings are part of the look:
+        /// big enough to hold up at speed, repeating where the Track tiles them,
+        /// and clamped where the sky must not wrap.
+        /// </summary>
+        public static void PrepareImports()
         {
-            EnsureFolder(TexturesFolder);
-            string path = Path.Combine(TexturesFolder, name + ".png");
+            ConfigureTexture(Path.Combine(TexturesFolder, "Asphalt.png"), 2048, TextureWrapMode.Repeat);
+            ConfigureTexture(Path.Combine(TexturesFolder, "Grass.png"), 2048, TextureWrapMode.Repeat);
+            ConfigureTexture(Path.Combine(SkyFolder, "GoldenHour.png"), 4096, TextureWrapMode.Clamp);
+        }
 
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            float offset = 0f;
-            foreach (char character in name)
+        private static void ConfigureTexture(string path, int maxSize, TextureWrapMode wrap)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
             {
-                offset += character * 7;
+                throw new IOException("Missing imported texture at " + path);
             }
 
-            for (int y = 0; y < size; y++)
+            bool dirty = false;
+            if (importer.maxTextureSize < maxSize)
             {
-                for (int x = 0; x < size; x++)
-                {
-                    float u = offset + (float)x / size * frequency;
-                    float v = offset + (float)y / size * frequency;
-                    float noise = Mathf.PerlinNoise(u, v) * 0.65f + Mathf.PerlinNoise(u * 3.7f, v * 3.7f) * 0.35f;
-                    texture.SetPixel(x, y, Color.Lerp(low, high, noise));
-                }
+                importer.maxTextureSize = maxSize;
+                dirty = true;
             }
 
-            texture.Apply();
-            return Save(texture, path);
+            if (importer.wrapMode != wrap)
+            {
+                importer.wrapMode = wrap;
+                dirty = true;
+            }
+
+            if (!importer.mipmapEnabled)
+            {
+                importer.mipmapEnabled = true;
+                dirty = true;
+            }
+
+            if (!importer.sRGBTexture)
+            {
+                importer.sRGBTexture = true;
+                dirty = true;
+            }
+
+            if (importer.textureCompression != TextureImporterCompression.CompressedHQ)
+            {
+                importer.textureCompression = TextureImporterCompression.CompressedHQ;
+                dirty = true;
+            }
+
+            if (dirty)
+            {
+                importer.SaveAndReimport();
+            }
         }
 
         /// <summary>Stripes that run around the Track, which is how a Kerb reads at speed.</summary>
@@ -217,76 +273,18 @@ namespace Unbounded.Editor
         }
 
         /// <summary>
-        /// A latitude-longitude sky with a painted sun and cloud bands, so the
-        /// sky, the sun light, and the fog all come from one golden-hour plan.
+        /// The imported sunset panorama, rotated so its painted sun sits on the
+        /// same azimuth as the directional light the Track is lit by.
         /// </summary>
         public static Material Sky(Vector3 sunDirection, string name = "GoldenHour")
         {
             EnsureFolders();
-            const int width = 1024;
-            const int height = 512;
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            Vector3 sun = new Vector3(sunDirection.x, Mathf.Max(0.02f, sunDirection.y), sunDirection.z).normalized;
-
-            Color horizon = Srgb(0xF7, 0xC4, 0x93);
-            Color mid = Srgb(0x9D, 0xBA, 0xD2);
-            Color zenith = Srgb(0x1F, 0x44, 0x70);
-            Color below = Srgb(0x9A, 0x8A, 0x78);
-            Color cloudLit = Srgb(0xFA, 0xD3, 0xA8);
-            Color cloudShade = Srgb(0x8E, 0x9A, 0xAD);
-            Color sunCore = Srgb(0xFF, 0xF4, 0xD6);
-
-            for (int y = 0; y < height; y++)
-            {
-                // Texture rows run bottom to top, so the top row has to be the
-                // zenith for the panoramic shader to put the sky overhead.
-                float v = (y + 0.5f) / height;
-                float elevation = (v - 0.5f) * Mathf.PI;
-
-                for (int x = 0; x < width; x++)
-                {
-                    float u = (x + 0.5f) / width;
-                    float azimuth = (u - 0.5f) * Mathf.PI * 2f;
-                    var direction = new Vector3(
-                        Mathf.Cos(elevation) * Mathf.Sin(azimuth),
-                        Mathf.Sin(elevation),
-                        Mathf.Cos(elevation) * Mathf.Cos(azimuth));
-
-                    Color sky;
-                    if (elevation >= 0f)
-                    {
-                        float t = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 1.35f, elevation));
-                        sky = Color.Lerp(horizon, mid, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.2f, elevation)));
-                        sky = Color.Lerp(sky, zenith, t);
-                    }
-                    else
-                    {
-                        sky = Color.Lerp(horizon, below, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.5f, -elevation)));
-                    }
-
-                    // Cloud bands, stretched along the horizon and thinning
-                    // towards the zenith, so the sky has direction.
-                    float band = Mathf.InverseLerp(0.04f, 0.35f, elevation) * Mathf.InverseLerp(1.1f, 0.45f, elevation);
-                    if (band > 0f)
-                    {
-                        float cloud = Mathf.PerlinNoise(u * 7f + 11f, v * 26f) * 0.6f
-                                      + Mathf.PerlinNoise(u * 17f + 4f, v * 52f) * 0.4f;
-                        float mask = Mathf.SmoothStep(0.52f, 0.78f, cloud) * band * 0.85f;
-                        float lit = Mathf.InverseLerp(0.5f, 0.9f, cloud);
-                        sky = Color.Lerp(sky, Color.Lerp(cloudShade, cloudLit, lit), mask);
-                    }
-
-                    float sunDot = Mathf.Max(0f, Vector3.Dot(direction, sun));
-                    sky += sunCore * Mathf.Pow(sunDot, 220f) * 1.2f;
-                    sky += new Color(1f, 0.72f, 0.44f) * Mathf.Pow(sunDot, 8f) * 0.22f;
-                    sky.a = 1f;
-                    texture.SetPixel(x, y, sky);
-                }
-            }
-
-            texture.Apply();
             string texturePath = Path.Combine(SkyFolder, name + ".png");
-            Save(texture, texturePath, wrap: TextureWrapMode.Clamp);
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            if (texture == null)
+            {
+                throw new IOException("Missing imported sky at " + texturePath);
+            }
 
             Shader shader = Shader.Find("Skybox/Panoramic");
             if (shader == null)
@@ -303,12 +301,23 @@ namespace Unbounded.Editor
             }
 
             material.shader = shader;
-            material.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath));
+            material.SetTexture("_MainTex", texture);
             material.SetFloat("_Mapping", 1f);
             material.SetFloat("_ImageType", 0f);
-            material.SetFloat("_Exposure", 1.15f);
+            material.SetFloat("_Exposure", 1f);
+            material.SetFloat("_Rotation", SkyRotation(sunDirection));
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        /// <summary>
+        /// The panorama paints its sun at the centre column, which is the
+        /// panoramic shader's zero azimuth, so the light's own azimuth becomes
+        /// the sky's rotation and the painted disc sits behind the sun light.
+        /// </summary>
+        private static float SkyRotation(Vector3 sunDirection)
+        {
+            return Mathf.Repeat(Mathf.Atan2(sunDirection.x, sunDirection.z) * Mathf.Rad2Deg, 360f);
         }
 
         /// <summary>
@@ -347,8 +356,8 @@ namespace Unbounded.Editor
             motionBlur.intensity.Override(0.35f);
 
             ColorAdjustments grade = AddVolumeComponent<ColorAdjustments>(profile);
-            grade.postExposure.Override(0.45f);
-            grade.contrast.Override(10f);
+            grade.postExposure.Override(0.6f);
+            grade.contrast.Override(4f);
             grade.saturation.Override(12f);
             grade.colorFilter.Override(Srgb(0xFF, 0xF0, 0xE0));
 
@@ -363,7 +372,7 @@ namespace Unbounded.Editor
 
             Vignette vignette = AddVolumeComponent<Vignette>(profile);
             vignette.color.Override(Srgb(0x0B, 0x0D, 0x12));
-            vignette.intensity.Override(0.18f);
+            vignette.intensity.Override(0.05f);
             vignette.smoothness.Override(0.5f);
             vignette.rounded.Override(false);
 
