@@ -669,7 +669,8 @@ namespace Unbounded.Editor
             var surface = car.AddComponent<CarSurfaceAdapter>();
             surface.Configure(track);
 
-            AddCarVisual(car, carBody, paint);
+            GameObject visual = AddCarVisual(car, carBody, paint);
+            AddWheelVisuals(car, carBody.Name, visual.transform);
 
             return car;
         }
@@ -679,7 +680,7 @@ namespace Unbounded.Editor
         /// The body panels follow the car's livery; the imported glass, tyres,
         /// lights, and trim stay as they came.
         /// </summary>
-        private static void AddCarVisual(GameObject car, ImportedCars.CarBody body, Material paint)
+        private static GameObject AddCarVisual(GameObject car, ImportedCars.CarBody body, Material paint)
         {
             GameObject visual = ImportedCars.Spawn(body, car.transform, paint);
 
@@ -689,6 +690,89 @@ namespace Unbounded.Editor
 
             Bounds scaled = KitAssets.BoundsIn(visual, car.transform);
             visual.transform.localPosition -= new Vector3(scaled.center.x, scaled.min.y, scaled.center.z);
+            return visual;
+        }
+
+        /// <summary>
+        /// Mounts the four imported wheels on car-space pivots. Steering turns
+        /// the front pivots around the car's up axis, and every wheel's spin
+        /// pivot turns around the car's right axis, so the source model's import
+        /// rotation never leaks into the animation. The left pair is yawed to
+        /// face its rim outward, and the right-front wheel's measured radius is
+        /// serialized on the component for the runtime roll.
+        /// </summary>
+        private static void AddWheelVisuals(GameObject car, string carName, Transform visual)
+        {
+            bool[] steers = { true, true, false, false };
+            bool[] mirrors = { true, false, true, false };
+            string[] labels = { "LF", "RF", "LB", "RB" };
+            var wheels = new WheelVisuals.Wheel[ImportedCars.WheelDummies.Length];
+            var mounts = new Transform[ImportedCars.WheelDummies.Length];
+
+            for (int i = 0; i < ImportedCars.WheelDummies.Length; i++)
+            {
+                Transform dummy = ImportedCars.FindWheelDummy(
+                    visual, ImportedCars.WheelDummies[i], carName);
+                Transform steer = CreateWheelPivot(
+                    car.transform, "Wheel " + labels[i] + " Steer", dummy.position);
+                Transform spin = CreateWheelPivot(
+                    steer, "Wheel " + labels[i] + " Spin", dummy.position);
+
+                var mountObject = new GameObject("Wheel " + labels[i] + " Mount");
+                Transform mount = mountObject.transform;
+                mount.SetParent(spin, false);
+                mount.localPosition = Vector3.zero;
+                mount.localRotation = Quaternion.identity;
+                mount.localScale = Vector3.one;
+
+                while (dummy.childCount > 0)
+                {
+                    dummy.GetChild(0).SetParent(mount, true);
+                }
+
+                if (mirrors[i])
+                {
+                    mount.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                }
+
+                wheels[i] = new WheelVisuals.Wheel(steer, spin, steers[i]);
+                mounts[i] = mount;
+            }
+
+            Bounds wheelBounds = KitAssets.BoundsIn(mounts[1].gameObject, car.transform);
+            float radius = Mathf.Max(wheelBounds.size.y, wheelBounds.size.z) * 0.5f;
+            float diameter = Mathf.Max(wheelBounds.size.y, wheelBounds.size.z);
+
+            if (float.IsNaN(radius) || float.IsInfinity(radius) || radius < WheelRoll.MinRadius)
+            {
+                throw new IOException(
+                    "The imported " + carName + " has no measurable wheel (radius " + radius + ").");
+            }
+
+            if (wheelBounds.size.x >= diameter)
+            {
+                throw new IOException(
+                    "The imported " + carName + " wheel's axle is not along the car's right axis.");
+            }
+
+            var visuals = car.AddComponent<WheelVisuals>();
+            visuals.Configure(
+                car.GetComponent<CarController>(),
+                car.GetComponent<Rigidbody>(),
+                wheels,
+                radius);
+            EditorUtility.SetDirty(visuals);
+        }
+
+        private static Transform CreateWheelPivot(Transform parent, string name, Vector3 worldPosition)
+        {
+            var pivotObject = new GameObject(name);
+            Transform pivot = pivotObject.transform;
+            pivot.SetParent(parent, false);
+            pivot.localPosition = parent.InverseTransformPoint(worldPosition);
+            pivot.localRotation = Quaternion.identity;
+            pivot.localScale = Vector3.one;
+            return pivot;
         }
 
         /// <summary>

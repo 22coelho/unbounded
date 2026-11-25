@@ -1239,6 +1239,91 @@ namespace Unbounded.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator EveryCarHasFourWheelsAndTheFrontPairSteers()
+        {
+            yield return LoadMainScene(keepOpponents: true);
+
+            WheelVisuals[] carWheels = Object.FindObjectsByType<WheelVisuals>();
+            Assert.That(carWheels.Length, Is.EqualTo(RaceGrid.OpponentCount + 1),
+                "The player and every opponent must carry wheel visuals.");
+
+            foreach (WheelVisuals visual in carWheels)
+            {
+                Assert.That(visual.WheelCount, Is.EqualTo(4),
+                    visual.name + " must have four wheels.");
+                Assert.That(visual.Radius, Is.GreaterThan(0.1f),
+                    visual.name + " has no usable wheel radius.");
+                Assert.That(visual.Radius, Is.LessThan(1f),
+                    visual.name + " has an implausible wheel radius.");
+
+                foreach (WheelVisuals.Wheel wheel in visual.Wheels)
+                {
+                    Assert.That(wheel.SteerPivot, Is.Not.Null,
+                        visual.name + " has an unbound steer pivot.");
+                    Assert.That(wheel.SpinPivot, Is.Not.Null,
+                        visual.name + " has an unbound spin pivot.");
+                }
+            }
+
+            // Drive the player alone, so the field cannot push the car around.
+            ClearTheField();
+            yield return null;
+
+            CarController car = Object.FindAnyObjectByType<CarController>();
+            Assert.That(car, Is.Not.Null);
+            DisablePlayerInput();
+
+            WheelVisuals player = car.GetComponent<WheelVisuals>();
+            Assert.That(player, Is.Not.Null, "The player car must carry wheel visuals.");
+
+            // The steering model does not need forward speed, so the front
+            // wheels must turn while the car sits on the line.
+            car.SetInput(new HandlingInput { Steer = 1f });
+            for (int i = 0; i < 10; i++)
+            {
+                yield return new WaitForFixedUpdate();
+                yield return null;
+            }
+
+            Assert.That(player.SteerAngleDegrees, Is.GreaterThan(1f),
+                "The front wheels must turn at standstill.");
+
+            float previousSpin = player.SpinAngleDegrees;
+            bool rolled = false;
+            car.SetInput(new HandlingInput { Throttle = 1f, Steer = 1f });
+
+            for (int i = 0; i < 40; i++)
+            {
+                yield return new WaitForFixedUpdate();
+                yield return null;
+
+                if (Mathf.Abs(Mathf.DeltaAngle(previousSpin, player.SpinAngleDegrees)) > 0.1f)
+                {
+                    rolled = true;
+                }
+
+                previousSpin = player.SpinAngleDegrees;
+            }
+
+            Assert.That(player.SteerAngleDegrees, Is.GreaterThan(1f),
+                "The front wheels must turn with the steering input.");
+            Assert.That(rolled, Is.True, "Driving must roll the wheels.");
+
+            foreach (WheelVisuals.Wheel wheel in player.Wheels)
+            {
+                float yaw = Mathf.Abs(Mathf.DeltaAngle(0f, wheel.SteerPivot.localEulerAngles.y));
+                if (wheel.Steers)
+                {
+                    Assert.That(yaw, Is.GreaterThan(1f), "A front wheel did not steer.");
+                }
+                else
+                {
+                    Assert.That(yaw, Is.LessThan(0.1f), "A rear wheel steered.");
+                }
+            }
+        }
+
+        [UnityTest]
         public IEnumerator EnginePitchFollowsTheCarsSpeedAndSettlesBackToIdle()
         {
             yield return LoadMainScene();

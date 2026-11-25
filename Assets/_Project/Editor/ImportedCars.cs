@@ -72,6 +72,15 @@ namespace Unbounded.Editor
             "colmesh", "car_col", "cheetah_col", "shadow"
         };
 
+        /// <summary>The imported car's four wheel anchors: front-left, front-right, rear-left, rear-right.</summary>
+        internal static readonly string[] WheelDummies =
+        {
+            "wheel_lf_dummy", "wheel_rf_dummy", "wheel_lb_dummy", "wheel_rb_dummy"
+        };
+
+        /// <summary>The one dummy the source model actually ships a wheel mesh under.</summary>
+        internal const string WheelSourceDummy = "wheel_rf_dummy";
+
         private static readonly Dictionary<string, Dictionary<string, string[]>> PartMaps =
             new Dictionary<string, Dictionary<string, string[]>>();
 
@@ -106,6 +115,7 @@ namespace Unbounded.Editor
             StripHiddenParts(instance);
             ImportMaterials(instance, body);
             PaintBody(instance, body, paint);
+            CompleteWheels(instance, body);
             return instance;
         }
 
@@ -253,6 +263,66 @@ namespace Unbounded.Editor
                     "The imported " + body.Name + " has no material named '" +
                     body.PaintMaterial + "'. It has: " + string.Join(", ", names));
             }
+        }
+
+        /// <summary>
+        /// The source bodies carry one real wheel and three empty anchors. Copy
+        /// the right-front wheel onto the other anchors so every car has four
+        /// tyres. The left pair is not mirrored here: the scene builder mounts
+        /// each wheel on a car-space pivot, where mirroring is unambiguous.
+        /// </summary>
+        private static void CompleteWheels(GameObject instance, CarBody body)
+        {
+            Transform source = FindWheelDummy(instance.transform, WheelSourceDummy, body.Name);
+            var sourceChildren = new List<Transform>();
+            foreach (Transform child in source)
+            {
+                sourceChildren.Add(child);
+            }
+
+            if (sourceChildren.Count == 0 ||
+                source.GetComponentsInChildren<MeshRenderer>(true).Length == 0)
+            {
+                throw new IOException(
+                    "The imported " + body.Name + " has no wheel mesh under " + WheelSourceDummy + ".");
+            }
+
+            foreach (string name in WheelDummies)
+            {
+                if (name == WheelSourceDummy)
+                {
+                    continue;
+                }
+
+                Transform dummy = FindWheelDummy(instance.transform, name, body.Name);
+
+                // The Ferrari carries bare rims on the other anchors; drop them
+                // so every corner gets the source's tyre-and-rim assembly.
+                for (int i = dummy.childCount - 1; i >= 0; i--)
+                {
+                    UnityEngine.Object.DestroyImmediate(dummy.GetChild(i).gameObject);
+                }
+
+                foreach (Transform child in sourceChildren)
+                {
+                    GameObject clone = UnityEngine.Object.Instantiate(child.gameObject, dummy, false);
+                    clone.name = child.name;
+                }
+            }
+        }
+
+        /// <summary>Finds a named anchor inside a car, or fails the build rather than leaving a wheel-less car.</summary>
+        internal static Transform FindWheelDummy(Transform visual, string name, string carName)
+        {
+            foreach (Transform child in visual.GetComponentsInChildren<Transform>(true))
+            {
+                if (string.Equals(child.name, name, StringComparison.Ordinal))
+                {
+                    return child;
+                }
+            }
+
+            throw new IOException("The imported " + carName + " has no " + name + ".");
         }
 
         /// <summary>Gives every renderer its material slots once, then saves them back.</summary>
