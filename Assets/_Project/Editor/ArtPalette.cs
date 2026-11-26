@@ -56,6 +56,15 @@ namespace Unbounded.Editor
             Linear(0x9B, 0x6C, 0xD0)
         };
 
+        // The cars' glazing and window trim. The vendored glass is
+        // semi-transparent, which shows the stripped, hollow cabin behind it,
+        // so every car renders opaque dark glass instead. A paint slot on a
+        // glazed part falls back to this black gloss rather than the livery:
+        // the R35's Windows part and the Ferrari's windscreen both carry the
+        // body material on a pane.
+        public static readonly Color CarGlassDark = Linear(0x12, 0x16, 0x1B);
+        public static readonly Color CarTrimDark = Linear(0x0E, 0x10, 0x13);
+
         // Light and air. The sun sits low and warm, the sky answers with a
         // cooler zenith, and the fog takes the horizon colour so the ground
         // edge dissolves instead of ending.

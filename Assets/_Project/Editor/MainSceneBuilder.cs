@@ -114,6 +114,8 @@ namespace Unbounded.Editor
             public Material Tyre;
             public Material Trim;
             public Material Glass;
+            public Material GlassDark;
+            public Material TrimDark;
             public Material Nitro;
             public Material PlayerPaint;
             public Material[] OpponentPaint;
@@ -155,6 +157,8 @@ namespace Unbounded.Editor
                 Tyre = ArtPalette.Lit("CarTyre", ArtPalette.Tyre, 0.12f),
                 Trim = ArtPalette.Lit("CarTrim", ArtPalette.KitWhite, 0.45f, 0.1f),
                 Glass = ArtPalette.Lit("CarGlass", ArtPalette.KitGlass, 0.9f, 0.35f),
+                GlassDark = ArtPalette.Lit("CarGlassDark", ArtPalette.CarGlassDark, 0.9f, 0.1f),
+                TrimDark = ArtPalette.Lit("CarTrimDark", ArtPalette.CarTrimDark, 0.93f, 0.35f),
                 Nitro = ArtPalette.Emissive("NitroFlame", ArtPalette.NitroFlame, 5f),
                 PlayerPaint = ArtPalette.Lit("CarPaintPlayer", ArtPalette.PlayerPaint, 0.72f, 0.2f),
                 OpponentPaint = new Material[ArtPalette.OpponentPaint.Length]
@@ -572,6 +576,7 @@ namespace Unbounded.Editor
             GameObject car = CreateCar(
                 "Player Car",
                 track.SamplePose(LapProgressTracker.StartDistance),
+                materials,
                 materials.PlayerPaint,
                 ImportedCars.Ferrari,
                 physicMaterial,
@@ -614,6 +619,7 @@ namespace Unbounded.Editor
                 GameObject car = CreateCar(
                     "Opponent " + (slot + 1),
                     track.SamplePose(distance, lateral),
+                    materials,
                     materials.OpponentPaint[slot],
                     slot % 2 == 0 ? ImportedCars.R35 : ImportedCars.C63,
                     physicMaterial,
@@ -639,6 +645,7 @@ namespace Unbounded.Editor
         private static GameObject CreateCar(
             string name,
             Pose spawn,
+            Materials materials,
             Material paint,
             ImportedCars.CarBody carBody,
             PhysicsMaterial physicMaterial,
@@ -669,7 +676,7 @@ namespace Unbounded.Editor
             var surface = car.AddComponent<CarSurfaceAdapter>();
             surface.Configure(track);
 
-            GameObject visual = AddCarVisual(car, carBody, paint);
+            GameObject visual = AddCarVisual(car, carBody, paint, materials.GlassDark, materials.TrimDark);
             AddWheelVisuals(car, carBody.Name, visual.transform);
 
             return car;
@@ -678,11 +685,17 @@ namespace Unbounded.Editor
         /// <summary>
         /// The imported body, scaled to the collider and laid on the Track.
         /// The body panels follow the car's livery; the imported glass, tyres,
-        /// lights, and trim stay as they came.
+        /// lights, and trim stay as they came, except that every glazed part is
+        /// opaque and dark so the stripped cabin never shows through.
         /// </summary>
-        private static GameObject AddCarVisual(GameObject car, ImportedCars.CarBody body, Material paint)
+        private static GameObject AddCarVisual(
+            GameObject car,
+            ImportedCars.CarBody body,
+            Material paint,
+            Material glass,
+            Material trim)
         {
-            GameObject visual = ImportedCars.Spawn(body, car.transform, paint);
+            GameObject visual = ImportedCars.Spawn(body, car.transform, paint, glass, trim);
 
             Bounds bounds = KitAssets.BoundsIn(visual, car.transform);
             float scale = bounds.size.z > 0.001f ? CarVisualLength / bounds.size.z : 1f;

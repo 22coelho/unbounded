@@ -1,28 +1,10 @@
 # Unbounded
 
-A single-player arcade circuit racer built in Unity 6 and C#. One car, five AI
-opponents, three laps, and handling tuned for feel rather than simulation.
+A single-player arcade circuit racer built in Unity 6 and C#. 
+Developed solely with the intention of making a simple car racing game, with no financial purposes.
 
 [Watch the 60-second gameplay clip](docs/media/gameplay.mp4), captured from the
 macOS build.
-
-## Status
-
-Milestone 1 ships the vertical slice: a generated circuit with kerbs, barriers,
-ordered checkpoints, and a validated lap; one drivable arcade car with
-speed-dependent grip, reverse, nitro, reset-to-track, and grass that punishes
-cutting; a field of five AI opponents on a derived racing line; a full race loop
-with countdown, timer, pause, live position, final standings, and restart
-without a scene reload; a diegetic audio mix; and an art pass that dresses the
-field in imported photoreal cars under a photographed sunset sky, with
-surface textures from the same source and the free Kenney kits still dressing
-the circuit. The pause screen doubles as a settings
-menu for master volume and steering sensitivity, and both settings plus the
-player's best lap persist through PlayerPrefs.
-
-Handbrake and brake-to-drift are not in this milestone. The handling model is
-built to take them: they extend `HandlingInput` and the pure model without
-changing the Rigidbody adapter.
 
 ## Running the game
 
@@ -176,50 +158,6 @@ view. The HUD, countdown, pause, finish screen, and settings are UGUI. Engine
 pitch follows speed and throttle, tyre screech follows lateral slip, and impacts
 are one-shots scaled by closing speed; all audio is synthesised and diegetic.
 
-## Verification
-
-The build was checked outside the editor on the development machine (Apple M3
-Pro). The player has a small command-line harness, off by default, so the
-definition of done is repeatable:
-
-```sh
-# Ten-minute soak: autopilot drives the player's car, restarts races, logs fps
-./Builds/macOS/Unbounded.app/Contents/MacOS/Unbounded \
-  -autopilot -fpsLog -sessionMinutes 10 \
-  -logFile /tmp/unbounded-soak.log
-
-# Frame log only, no autopilot
-./Builds/macOS/Unbounded.app/Contents/MacOS/Unbounded -fpsLog -sessionMinutes 1
-```
-
-`-autopilot` attaches the same racing-line follower the opponents use to the
-player's car. `-fpsLog` reports the average, 1% low, and worst frame across
-racing frames only; countdowns, pauses, and loading are excluded.
-`-sessionMinutes` quits by itself. A run passes when the log contains no
-exceptions or errors and the summary stays above 60 fps.
-
-The ten-minute definition-of-done run, at 1280x720 on an Apple M3 Pro:
-
-- four Races, with three restarts that did not reload the scene
-- 578.2 seconds of racing, 547,687 frames
-- **947.3 fps average, 208.2 fps 1% low, 2.9 fps worst frame**
-- no exceptions or errors in the player log
-
-The remaining warnings are benign: the flat Ground plane uses two large
-triangles, and URP strips the depth-of-field and Panini shaders the scene does
-not use.
-
-The gameplay clip is captured with the same harness:
-
-```sh
-./Builds/macOS/Unbounded.app/Contents/MacOS/Unbounded \
-  -captureClip -captureSeconds 60 -capturePath /tmp/unbounded-clip \
-  -screen-width 1280 -screen-height 720 -screen-fullscreen 0
-```
-
-It writes a numbered JPEG sequence; encode it to MP4 at 30 fps and place it at
-`docs/media/gameplay.mp4`, which is the file the README links to.
-
 ## Layout
 
 ```
@@ -243,26 +181,3 @@ Assets/_Project/
 Assembly references point inward: `UI` and `App` may reference any runtime
 assembly, while `Vehicle`, `Track`, `AI`, and `Race` reference only `Core`.
 Illegal dependencies fail at compile time.
-
-## Packages
-
-The package manifest carries only what the game uses: URP, Cinemachine, Input
-System, UGUI, Test Framework, and the required built-in modules. The default
-2D editor packages, analytics, purchasing, XR, multiplayer centre, AI
-navigation, timeline, collaboration, and the mobile/terrain/video modules have
-been removed. UGUI still pulls the core 2D physics module transitively, but no
-2D package or tilemap support ships.
-
-## Design decisions
-
-- [ADR-0001](docs/adr/0001-custom-arcade-car-controller.md) — custom Rigidbody
-  controller instead of `WheelCollider`
-- [ADR-0002](docs/adr/0002-procedural-spline-track.md) — track generated from a
-  centreline spline
-- [GLOSSARY.md](GLOSSARY.md) — the project's domain vocabulary
-
-## Definition of done
-
-A build for macOS and Windows that holds 60fps, survives a ten-minute session
-without errors, ships with a README explaining the handling model, and comes
-with a 60-second gameplay clip.

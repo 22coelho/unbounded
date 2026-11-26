@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Unbounded.Editor
 {
@@ -11,8 +12,8 @@ namespace Unbounded.Editor
     /// not the per-part materials: the source project assigned those from its
     /// prefabs, so that assignment is vendored beside each model as
     /// <c>PartMaterials.json</c>. Spawning strips the parts a chase camera never
-    /// sees, restores the imported materials by object name, then paints the
-    /// body panels in the car's livery.
+    /// sees, restores the imported materials by object name, paints the body
+    /// panels in the car's livery, and gives every car the same opaque glass.
     /// </summary>
     internal static class ImportedCars
     {
@@ -60,7 +61,8 @@ namespace Unbounded.Editor
             "C63",
             // The C63's single material also covers its chrome, lamp housings,
             // and window trim. Those stay black gloss instead of the livery.
-            "chrome", "lamp", "windows_line");
+            // "st_" is the source's steklo (glass) prefix on its side windows.
+            "chrome", "lamp", "windows_line", "st_");
 
         // Whole objects that a chase camera never sees, or that the source
         // project carried as GTA collision and shadow meshes. Matching is by
@@ -70,6 +72,13 @@ namespace Unbounded.Editor
             "interior", "cabin", "dashboard", "dash", "seat", "steer",
             "gauges", "gauge", "leather", "fablic", "torpeda", "engine",
             "colmesh", "car_col", "cheetah_col", "shadow"
+        };
+
+        // Glazed parts. Their paint slot is trim, never the livery, and every
+        // transparent slot becomes the opaque car glass.
+        private static readonly string[] GlassParts =
+        {
+            "window", "windscreen", "glass"
         };
 
         /// <summary>The imported car's four wheel anchors: front-left, front-right, rear-left, rear-right.</summary>
@@ -86,7 +95,14 @@ namespace Unbounded.Editor
 
         private static readonly HashSet<string> Warned = new HashSet<string>();
 
-        public static GameObject Spawn(CarBody body, Transform parent, Material paint)
+        private static readonly HashSet<string> Logged = new HashSet<string>();
+
+        public static GameObject Spawn(
+            CarBody body,
+            Transform parent,
+            Material paint,
+            Material glass,
+            Material trim)
         {
             GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(body.AssetPath);
             if (asset == null)
@@ -113,8 +129,10 @@ namespace Unbounded.Editor
             }
 
             StripHiddenParts(instance);
-            ImportMaterials(instance, body);
-            PaintBody(instance, body, paint);
+            ImportMaterials(instance, body, trim);
+            PaintBody(instance, body, paint, trim);
+            ReplaceGlass(instance, body, glass);
+            VerifyMaterials(instance, body, paint);
             CompleteWheels(instance, body);
             return instance;
         }
@@ -150,9 +168,11 @@ namespace Unbounded.Editor
         /// Restores the source project's per-part materials, which the FBX only
         /// names. Glass alpha, tyre rubber, chrome, and lamp textures all live
         /// in those materials; without them the bodies would render as white
-        /// URP defaults.
+        /// URP defaults. A part the source prefab never assigned falls back to
+        /// its own vendored materials, or to trim: the FBX leaves those slots
+        /// null, and a null slot renders Unity's magenta error material.
         /// </summary>
-        private static void ImportMaterials(GameObject instance, CarBody body)
+        private static void ImportMaterials(GameObject instance, CarBody body, Material trim)
         {
             Dictionary<string, string[]> parts = LoadPartMap(body);
             Dictionary<string, Material> imported = LoadMaterials(body);
@@ -164,6 +184,7 @@ namespace Unbounded.Editor
                 if (!parts.TryGetValue(part, out string[] names))
                 {
                     unmatched.Add(part);
+                    UseFallbackMaterials(part, imported, slots, trim);
                     return;
                 }
 
@@ -192,7 +213,76 @@ namespace Unbounded.Editor
             {
                 Debug.LogWarning(
                     "The imported " + body.Name + " has parts with no vendored material " +
-                    "assignment: " + string.Join(", ", unmatched));
+                    "assignment: " + string.Join(", ", unmatched) + ". Their slots were " +
+                    "filled from the vendored material names or the black trim.");
+            }
+        }
+
+        /// <summary>
+        /// Fills a part the source prefab left unassigned. Vendored materials are
+        /// named after their part, so a part with a full set (<c>headlight_l.0</c>
+        /// through <c>headlight_l.5</c>) takes them by index, a part with a single
+        /// match (<c>plate.1</c>) takes it everywhere, and anything else is trim.
+        /// </summary>
+        private static void UseFallbackMaterials(
+            string part,
+            Dictionary<string, Material> imported,
+            Material[] slots,
+            Material trim)
+        {
+            var named = new SortedDictionary<int, Material>();
+            string prefix = part + ".";
+            foreach (KeyValuePair<string, Material> material in imported)
+            {
+                if (material.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(material.Key.Substring(prefix.Length), out int index))
+                {
+                    named[index] = material.Value;
+                }
+            }
+
+            bool complete = named.Count == slots.Length;
+            if (complete)
+            {
+                foreach (int index in named.Keys)
+                {
+                    if (index >= slots.Length)
+                    {
+                        complete = false;
+                        break;
+                    }
+                }
+            }
+
+            if (complete)
+            {
+                foreach (KeyValuePair<int, Material> material in named)
+                {
+                    slots[material.Key] = material.Value;
+                }
+
+                return;
+            }
+
+            if (named.Count == 1)
+            {
+                Material only = null;
+                foreach (KeyValuePair<int, Material> material in named)
+                {
+                    only = material.Value;
+                }
+
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    slots[i] = only;
+                }
+
+                return;
+            }
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                slots[i] = trim;
             }
         }
 
@@ -226,7 +316,7 @@ namespace Unbounded.Editor
             return parts;
         }
 
-        private static void PaintBody(GameObject instance, CarBody body, Material paint)
+        private static void PaintBody(GameObject instance, CarBody body, Material paint, Material trim)
         {
             var names = new HashSet<string>();
             bool painted = false;
@@ -239,9 +329,11 @@ namespace Unbounded.Editor
                     return;
                 }
 
+                bool glazed = ContainsAny(part, GlassParts);
+
                 for (int i = 0; i < slots.Length; i++)
                 {
-                    if (slots[i] == null)
+                    if (slots[i] == null || IsTransparent(slots[i]))
                     {
                         continue;
                     }
@@ -249,11 +341,15 @@ namespace Unbounded.Editor
                     string name = Clean(slots[i].name);
                     names.Add(name);
 
-                    if (string.Equals(name, body.PaintMaterial, StringComparison.OrdinalIgnoreCase))
+                    if (!string.Equals(name, body.PaintMaterial, StringComparison.OrdinalIgnoreCase))
                     {
-                        slots[i] = paint;
-                        painted = true;
+                        continue;
                     }
+
+                    // Trim that belongs to the glazing reads as black gloss, not
+                    // as another painted body panel.
+                    slots[i] = glazed ? trim : paint;
+                    painted |= !glazed;
                 }
             });
 
@@ -264,6 +360,73 @@ namespace Unbounded.Editor
                     body.PaintMaterial + "'. It has: " + string.Join(", ", names));
             }
         }
+
+        /// <summary>
+        /// Replaces every transparent slot with the car's opaque glass. The
+        /// vendored glass is semi-transparent with no cabin behind it: the
+        /// interiors are stripped, so it shows the hollow shell and whatever
+        /// the source left in there. Opaque dark glass reads as tint at chase
+        /// distance and costs one material for the whole field.
+        /// </summary>
+        private static void ReplaceGlass(GameObject instance, CarBody body, Material glass)
+        {
+            var replaced = new List<string>();
+            EditMaterialSlots(instance, (renderer, slots) =>
+            {
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (IsTransparent(slots[i]))
+                    {
+                        replaced.Add(Clean(slots[i].name));
+                        slots[i] = glass;
+                    }
+                }
+            });
+
+            if (replaced.Count > 0 && Logged.Add(body.Name + " glass"))
+            {
+                Debug.Log(
+                    "The imported " + body.Name + " renders " + string.Join(", ", replaced) +
+                    " as opaque car glass.");
+            }
+        }
+
+        /// <summary>
+        /// Fails the build on a null material slot, which renders Unity's magenta
+        /// error material in the field, and warns if a glazed part still carries
+        /// the livery. Both would otherwise reach the player silently.
+        /// </summary>
+        private static void VerifyMaterials(GameObject instance, CarBody body, Material paint)
+        {
+            foreach (MeshRenderer renderer in instance.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                Material[] slots = renderer.sharedMaterials;
+                string part = Clean(renderer.name);
+
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (slots[i] == null)
+                    {
+                        throw new IOException(
+                            "The imported " + body.Name + " part '" + part +
+                            "' has an unassigned material slot, which renders magenta.");
+                    }
+
+                    if (slots[i] == paint && ContainsAny(part, GlassParts) &&
+                        Warned.Add(body.Name + " glass livery"))
+                    {
+                        Debug.LogWarning(
+                            "The imported " + body.Name + " part '" + part +
+                            "' still takes the car's livery on its glazing.");
+                    }
+                }
+            }
+        }
+
+        private static bool IsTransparent(Material material) =>
+            material != null &&
+            (material.renderQueue >= (int)RenderQueue.Transparent ||
+             (material.HasProperty("_Surface") && material.GetFloat("_Surface") > 0.5f));
 
         /// <summary>
         /// The source bodies carry one real wheel and three empty anchors. Copy
