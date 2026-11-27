@@ -21,6 +21,7 @@ namespace Unbounded.Editor
     /// camera that keeps the barriers out of the lens. Every material, the sky,
     /// and the post-processing stack come from <see cref="ArtPalette"/>, so the
     /// look is one deliberate choice rather than a pile of asset defaults.
+    /// The scene file is generated: change this builder, never Main.unity by hand.
     /// Run from the menu or in batch mode:
     /// Unity -batchmode -quit -projectPath . -executeMethod Unbounded.Editor.MainSceneBuilder.Build
     /// </summary>

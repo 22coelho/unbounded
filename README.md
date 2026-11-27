@@ -53,6 +53,46 @@ The output paths are fixed so a hand-made build and a CI build are the same
 artifact: `Builds/macOS/Unbounded.app` and `Builds/Windows/Unbounded.exe`.
 Windows builds need the Unity **Windows Build Support** module installed.
 
+## Verification
+
+`./verify.sh` is the definition of done in one command: it rebuilds
+`Assets/_Project/Scenes/Main.unity` from `MainSceneBuilder`, then runs the
+EditMode and PlayMode suites. Results and logs land in `Logs/verify/`, which is
+ignored by git.
+
+```sh
+./verify.sh            # scene build + both suites
+./verify.sh scene      # rebuild the generated scene only
+./verify.sh tests      # both suites only
+./verify.sh editmode   # fast suite; the pre-push hook runs this
+./verify.sh capture    # record a clip from the built macOS player
+```
+
+The pre-push hook runs the EditMode suite. The scene build and PlayMode suite
+stay manual: the builder rewrites the generated scene, and PlayMode takes
+minutes. A scene build leaves `Main.unity` with thousands of renumbered lines;
+this shows only the real changes, and `git checkout --` discards them:
+
+```sh
+git show HEAD:Assets/_Project/Scenes/Main.unity \
+  | Tools/scene-diff - Assets/_Project/Scenes/Main.unity
+```
+
+Unattended runs of a built player read these flags, defined in
+`Assets/_Project/Scripts/App/AutomationMode.cs`:
+
+| Flag | Effect |
+| --- | --- |
+| `-autopilot` | drive the player's car with the AI racing line |
+| `-fpsLog` | log frame-time averages every ten seconds and at exit |
+| `-sessionMinutes N` | quit after N minutes, so a soak ends by itself |
+| `-captureClip` | write a numbered JPEG sequence at a fixed 30 fps |
+| `-capturePath DIR` | where the sequence goes |
+| `-captureSeconds N` | clip length in seconds (default 60) |
+
+A visual bug is reproduced, not argued about: capture it, then compare the
+frames.
+
 ## Controls
 
 | Action | Gamepad | Keyboard |
