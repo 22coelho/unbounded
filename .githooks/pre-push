@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# pre-push hook -- run the fast suite before anything leaves the machine.
+#
+# The scene build and the PlayMode suite stay manual: the builder rewrites
+# Main.unity (dirtying the tree mid-push) and PlayMode takes minutes. Run
+# ./verify.sh for the full definition of done.
+#
+# Bypass only for a documentation-only push: PRE_PUSH_SKIP=1 git push ...
+set -eu
+
+if [ "${PRE_PUSH_SKIP:-0}" = "1" ]; then
+  exit 0
+fi
+
+root="$(git rev-parse --show-toplevel)"
+exec "$root/verify.sh" editmode

@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""scene-diff -- diff Unity YAML without the renumbering noise.
+
+Unity rewrites every fileID whenever it reserialises a scene or prefab, and it
+does not promise to write objects in the same order. A one-line change can show
+up as tens of thousands of diff lines.
+
+This gives each document a key derived from its own content (with references
+blanked, so a changed child does not re-key its parent), rewrites every
+reference to that key, then sorts the documents by key before diffing. Pure
+renumbering and reordering disappear; a real change still shows.
+
+    Tools/scene-diff OLD NEW
+    git show HEAD:Assets/_Project/Scenes/Main.unity | Tools/scene-diff - Main.unity
+
+Exits 0 when the normalised files match, 1 when they differ (like diff).
+"""
+
+import difflib
+import hashlib
+import re
+import signal
+import sys
+
+HEADER_RE = re.compile(r"^--- !u!(\d+) &(-?\d+).*$", re.MULTILINE)
+REF_RE = re.compile(r"(fileID:\s*)(-?\d+)")
+ANCHOR_RE = re.compile(r"&(-?\d+)")
+
+
+def read(path):
+    if path == "-":
+        return sys.stdin.read()
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
+def parse_documents(text):
+    matches = list(HEADER_RE.finditer(text))
+    if not matches:
+        return text, []
+
+    preamble = text[: matches[0].start()]
+    documents = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        documents.append(
+            {
+                "class": match.group(1),
+                "id": match.group(2),
+                "header": text[match.start() : match.end()],
+                "body": text[match.end() : end],
+            }
+        )
+    return preamble, documents
+
+
+def game_object_names(documents):
+    names = {}
+    for document in documents:
+        if document["class"] != "1":
+            continue
+        match = re.search(r"^\s*m_Name: (.*)$", document["body"], re.MULTILINE)
+        names[document["id"]] = match.group(1).strip() if match else ""
+    return names
+
+
+def key_for(document, go_names):
+    """A stable name for this document: class, owner name, content hash."""
+    fingerprint = REF_RE.sub(lambda m: m.group(1) + "?", document["body"])
+    fingerprint = ANCHOR_RE.sub("&?", fingerprint)
+    digest = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:8]
+
+    label = ""
+    if document["class"] == "1":
+        label = go_names.get(document["id"], "")
+    else:
+        owner = re.search(r"m_GameObject:\s*\{fileID:\s*(-?\d+)\}", document["body"])
+        if owner:
+            label = go_names.get(owner.group(1), "")
+
+    label = re.sub(r"[^A-Za-z0-9_.-]+", "_", label)[:40]
+
+    parts = ["!u!" + document["class"]]
+    if label:
+        parts.append(label)
+    parts.append(digest)
+    return ":".join(parts)
+
+
+def normalise(text):
+    preamble, documents = parse_documents(text)
+    if not documents:
+        return text
+
+    go_names = game_object_names(documents)
+    keys = {
+        document["id"]: key_for(document, go_names) for document in documents
+    }
+
+    def rewrite_ref(match):
+        prefix, raw = match.group(1), match.group(2)
+        if raw == "0":
+            return prefix + "0"
+        return prefix + keys.get(raw, raw)
+
+    def rewrite_anchor(match):
+        raw = match.group(1)
+        return "&" + keys.get(raw, raw)
+
+    rendered = []
+    for document in documents:
+        header = ANCHOR_RE.sub(rewrite_anchor, document["header"])
+        body = REF_RE.sub(rewrite_ref, document["body"])
+        body = ANCHOR_RE.sub(rewrite_anchor, body)
+        rendered.append((keys[document["id"]], header + body))
+
+    # Sort by the rendered block, not just its key: two objects can share a
+    # content key while referring to different children, and their relative
+    # order must not depend on how Unity happened to write them.
+    rendered.sort(key=lambda item: item[1])
+    return preamble + "".join(block for _, block in rendered)
+
+
+def main(argv):
+    if len(argv) != 3:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+
+    old_path, new_path = argv[1], argv[2]
+    old = normalise(read(old_path)).splitlines(keepends=True)
+    new = normalise(read(new_path)).splitlines(keepends=True)
+
+    diff = list(
+        difflib.unified_diff(old, new, fromfile=old_path, tofile=new_path, n=3)
+    )
+    if not diff:
+        print("scene-diff: no meaningful change")
+        return 0
+
+    sys.stdout.writelines(diff)
+    changed = sum(
+        1
+        for line in diff
+        if line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
+    )
+    print("scene-diff: %d changed lines after normalising ids" % changed, file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    # Let `scene-diff ... | head` exit quietly.
+    if hasattr(signal, "SIGPIPE"):
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    sys.exit(main(sys.argv))
